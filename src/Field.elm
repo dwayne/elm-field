@@ -12,6 +12,7 @@ module Field exposing
     , positiveInt
     , setFromString
     , setFromValue
+    , subsetOfInt
     , trim
     )
 
@@ -66,6 +67,18 @@ positiveInt =
     customInt
         (\n ->
             if n > 0 then
+                Ok n
+
+            else
+                Err (ValidationError n)
+        )
+
+
+subsetOfInt : (Int -> Bool) -> Type e Int
+subsetOfInt isGood =
+    customInt
+        (\n ->
+            if isGood n then
                 Ok n
 
             else
