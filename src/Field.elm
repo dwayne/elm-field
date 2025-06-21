@@ -24,7 +24,7 @@ type Field e a
 
 type alias State e a =
     { raw : Raw
-    , processed : Validation (Error e) a
+    , processed : Validation (Error e a) a
     }
 
 
@@ -38,8 +38,8 @@ type Raw
 
 
 type alias Type e a =
-    { fromString : String -> Result (Error e) a
-    , fromValue : a -> Result (Error e) a
+    { fromString : String -> Result (Error e a) a
+    , fromValue : a -> Result (Error e a) a
     , toString : a -> String
     }
 
@@ -57,7 +57,7 @@ nonNegativeInt =
                 Ok n
 
             else
-                Err ValidationError
+                Err (ValidationError n)
         )
 
 
@@ -69,19 +69,29 @@ positiveInt =
                 Ok n
 
             else
-                Err ValidationError
+                Err (ValidationError n)
         )
 
 
-customInt : (Int -> Result (Error e) Int) -> Type e Int
+customInt : (Int -> Result (Error e Int) Int) -> Type e Int
 customInt validate =
-    { fromString = trim >> Result.andThen (String.toInt >> Result.fromMaybe ParseError >> Result.andThen validate)
+    { fromString =
+        trim
+            >> Result.andThen
+                (\t ->
+                    case String.toInt t of
+                        Just n ->
+                            validate n
+
+                        Nothing ->
+                            Err (ParseError t)
+                )
     , fromValue = validate
     , toString = String.fromInt
     }
 
 
-trim : String -> Result (Error e) String
+trim : String -> Result (Error e a) String
 trim s =
     let
         t =
@@ -105,8 +115,18 @@ optional tipe =
                 Err Required ->
                     Ok Nothing
 
-                Err e ->
-                    Err e
+                Err (ParseError t) ->
+                    Err (ParseError t)
+
+                Err (ValidationError value) ->
+                    --
+                    -- N.B. The unfortunate consequence is that we MUST use a `Maybe a`
+                    -- even though we want it to NEVER be `Nothing`.
+                    --
+                    Err (ValidationError (Just value))
+
+                Err (CustomError e) ->
+                    Err (CustomError e)
     , fromValue =
         \maybeValue ->
             case maybeValue of
@@ -118,19 +138,22 @@ optional tipe =
                         Err Required ->
                             Ok Nothing
 
-                        Err e ->
-                            Err e
+                        Err (ParseError s) ->
+                            Err (ParseError s)
+
+                        Err (ValidationError value) ->
+                            --
+                            -- N.B. The unfortunate consequence is that we MUST use a `Maybe a`
+                            -- even though we want it to NEVER be `Nothing`.
+                            --
+                            Err (ValidationError (Just value))
+
+                        Err (CustomError e) ->
+                            Err (CustomError e)
 
                 Nothing ->
                     Ok Nothing
-    , toString =
-        \maybeValue ->
-            case maybeValue of
-                Just value ->
-                    tipe.toString value
-
-                Nothing ->
-                    ""
+    , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
     }
 
 
@@ -138,10 +161,10 @@ optional tipe =
 -- ERROR
 
 
-type Error e
+type Error e a
     = Required
-    | ParseError
-    | ValidationError
+    | ParseError String
+    | ValidationError a
     | CustomError e
 
 
@@ -201,11 +224,11 @@ mapError f (Field tipe state) =
                 Required ->
                     Required
 
-                ParseError ->
-                    ParseError
+                ParseError s ->
+                    ParseError s
 
-                ValidationError ->
-                    ValidationError
+                ValidationError a ->
+                    ValidationError a
 
                 CustomError x ->
                     CustomError (f x)
