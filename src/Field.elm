@@ -10,6 +10,7 @@ module Field exposing
     , fromValue
     , int
     , mapError
+    , nonBlankString
     , nonEmptyString
     , nonNegativeFloat
     , nonNegativeInt
@@ -22,6 +23,7 @@ module Field exposing
     , subsetOfChar
     , subsetOfFloat
     , subsetOfInt
+    , subsetOfNonBlankString
     , subsetOfNonEmptyString
     , subsetOfString
     , trim
@@ -95,7 +97,7 @@ customInt validate =
                             validate n
 
                         Nothing ->
-                            Err (FormatError t)
+                            Err (SyntaxError t)
                 )
     , fromValue = validate
     , toString = String.fromInt
@@ -140,7 +142,7 @@ customFloat validate =
                             validate f
 
                         Nothing ->
-                            Err (FormatError t)
+                            Err (SyntaxError t)
                 )
     , fromValue = validate
     , toString = String.fromFloat
@@ -239,7 +241,7 @@ subsetOfChar isGood =
                     Err (ValidationError s)
 
                 Nothing ->
-                    Err Required
+                    Err Blank
     , fromValue = validate
     , toString = String.fromChar
     }
@@ -256,7 +258,7 @@ optional tipe =
                 Ok value ->
                     Ok (Just value)
 
-                Err Required ->
+                Err Blank ->
                     Ok Nothing
 
                 Err err ->
@@ -269,7 +271,7 @@ optional tipe =
                         Ok v2 ->
                             Ok (Just v2)
 
-                        Err Required ->
+                        Err Blank ->
                             Ok Nothing
 
                         Err err ->
@@ -283,26 +285,54 @@ optional tipe =
 
 string : Type e String
 string =
-    customString (String.trim >> Ok)
+    subsetOfString (String.trim >> Ok)
+
+
+
+--
+-- Empty string -> ""
+-- Blank string -> "", " ", "  ", " \t ", "\n \t \r"
+--
+-- Blank includes the empty string as well as strings consisting entirely of whitespace characters.
+--
 
 
 nonEmptyString : Type e String
 nonEmptyString =
-    customString trim
+    subsetOfString
+        (\s ->
+            if String.isEmpty s then
+                Err Blank
+
+            else
+                Ok (String.trim s)
+        )
 
 
-subsetOfString : (String -> Result e String) -> Type e String
-subsetOfString validate =
-    customString (validate >> Result.mapError CustomError)
-
-
-subsetOfNonEmptyString : (String -> Result e String) -> Type e String
+subsetOfNonEmptyString : (String -> Result (Error e) String) -> Type e String
 subsetOfNonEmptyString validate =
-    customString (trim >> Result.andThen (validate >> Result.mapError CustomError))
+    subsetOfString
+        (\s ->
+            if String.isEmpty s then
+                Err Blank
+
+            else
+                validate (String.trim s)
+        )
 
 
-customString : (String -> Result (Error e) String) -> Type e String
-customString validate =
+nonBlankString : Type e String
+nonBlankString =
+    subsetOfString trim
+
+
+subsetOfNonBlankString : (String -> Result (Error e) String) -> Type e String
+subsetOfNonBlankString validate =
+    subsetOfString (trim >> Result.andThen validate)
+
+
+subsetOfString : (String -> Result (Error e) String) -> Type e String
+subsetOfString validate =
     { fromString = validate
     , fromValue = validate
     , toString = identity
@@ -316,7 +346,7 @@ trim s =
             String.trim s
     in
     if String.isEmpty t then
-        Err Required
+        Err Blank
 
     else
         Ok t
@@ -327,8 +357,8 @@ trim s =
 
 
 type Error e
-    = Required
-    | FormatError String
+    = Blank
+    | SyntaxError String
     | ValidationError String
     | CustomError e
 
@@ -386,11 +416,11 @@ mapError f (Field tipe state) =
     let
         g error =
             case error of
-                Required ->
-                    Required
+                Blank ->
+                    Blank
 
-                FormatError s ->
-                    FormatError s
+                SyntaxError s ->
+                    SyntaxError s
 
                 ValidationError s ->
                     ValidationError s
