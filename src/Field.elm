@@ -2,6 +2,8 @@ module Field exposing
     ( Error(..)
     , Field
     , Type
+    , bool
+    , false
     , float
     , fromString
     , fromValue
@@ -17,6 +19,7 @@ module Field exposing
     , subsetOfFloat
     , subsetOfInt
     , trim
+    , true
     )
 
 import Validation as V exposing (Validation)
@@ -136,6 +139,81 @@ customFloat validate =
     , fromValue = validate
     , toString = String.fromFloat
     }
+
+
+bool : Type e Bool
+bool =
+    { fromString =
+        \s ->
+            let
+                t =
+                    String.trim s
+            in
+            if String.isEmpty t then
+                Ok False
+
+            else
+                Ok True
+    , fromValue = Ok
+    , toString = boolToString
+    }
+
+
+true : Type e Bool
+true =
+    { fromString =
+        \s ->
+            let
+                t =
+                    String.trim s
+            in
+            if String.isEmpty t then
+                Err (ValidationError False)
+
+            else
+                Ok True
+    , fromValue =
+        \b ->
+            if b then
+                Ok True
+
+            else
+                Err (ValidationError False)
+    , toString = boolToString
+    }
+
+
+false : Type e Bool
+false =
+    { fromString =
+        \s ->
+            let
+                t =
+                    String.trim s
+            in
+            if String.isEmpty t then
+                Ok False
+
+            else
+                Err (ValidationError True)
+    , fromValue =
+        \b ->
+            if b then
+                Err (ValidationError True)
+
+            else
+                Ok False
+    , toString = boolToString
+    }
+
+
+boolToString : Bool -> String
+boolToString b =
+    if b then
+        "True"
+
+    else
+        "False"
 
 
 trim : String -> Result (Error e a) String
