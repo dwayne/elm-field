@@ -10,6 +10,7 @@ module Field exposing
     , fromValue
     , int
     , mapError
+    , nonEmptyString
     , nonNegativeFloat
     , nonNegativeInt
     , optional
@@ -17,9 +18,12 @@ module Field exposing
     , positiveInt
     , setFromString
     , setFromValue
+    , string
     , subsetOfChar
     , subsetOfFloat
     , subsetOfInt
+    , subsetOfNonEmptyString
+    , subsetOfString
     , trim
     , true
     )
@@ -241,21 +245,11 @@ subsetOfChar isGood =
     }
 
 
-trim : String -> Result (Error e) String
-trim s =
-    let
-        t =
-            String.trim s
-    in
-    if String.isEmpty t then
-        Err Required
-
-    else
-        Ok t
-
-
 optional : Type e a -> Type e (Maybe a)
 optional tipe =
+    --
+    -- I don't think it would be wise to use optional with string fields.
+    --
     { fromString =
         \s ->
             case tipe.fromString s of
@@ -285,6 +279,47 @@ optional tipe =
                     Ok Nothing
     , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
     }
+
+
+string : Type e String
+string =
+    customString (String.trim >> Ok)
+
+
+nonEmptyString : Type e String
+nonEmptyString =
+    customString trim
+
+
+subsetOfString : (String -> Result e String) -> Type e String
+subsetOfString validate =
+    customString (validate >> Result.mapError CustomError)
+
+
+subsetOfNonEmptyString : (String -> Result e String) -> Type e String
+subsetOfNonEmptyString validate =
+    customString (trim >> Result.andThen (validate >> Result.mapError CustomError))
+
+
+customString : (String -> Result (Error e) String) -> Type e String
+customString validate =
+    { fromString = validate
+    , fromValue = validate
+    , toString = identity
+    }
+
+
+trim : String -> Result (Error e) String
+trim s =
+    let
+        t =
+            String.trim s
+    in
+    if String.isEmpty t then
+        Err Required
+
+    else
+        Ok t
 
 
 
