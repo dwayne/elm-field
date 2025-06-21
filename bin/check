@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+#
+# Usage: check
+#
+
+set -uo pipefail
+
+run () {
+  command=$*
+  output=$($command 2>&1)
+  error=$?
+  if (( error )); then
+    fail "$output"
+  fi
+}
+
+fail () {
+  echo "$1" >&2
+  exit 1
+}
+
+run format --validate
+run test
+run test-example
