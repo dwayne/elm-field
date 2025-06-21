@@ -2,16 +2,21 @@ module Field exposing
     ( Error(..)
     , Field
     , Type
+    , customFloat
     , customInt
+    , float
     , fromString
     , fromValue
     , int
     , mapError
+    , nonNegativeFloat
     , nonNegativeInt
     , optional
+    , positiveFloat
     , positiveInt
     , setFromString
     , setFromValue
+    , subsetOfFloat
     , subsetOfInt
     , trim
     )
@@ -101,6 +106,65 @@ customInt validate =
                 )
     , fromValue = validate
     , toString = String.fromInt
+    }
+
+
+float : Type e Float
+float =
+    customFloat Ok
+
+
+nonNegativeFloat : Type e Float
+nonNegativeFloat =
+    customFloat
+        (\f ->
+            if f >= 0 then
+                Ok f
+
+            else
+                Err (ValidationError f)
+        )
+
+
+positiveFloat : Type e Float
+positiveFloat =
+    customFloat
+        (\f ->
+            if f > 0 then
+                Ok f
+
+            else
+                Err (ValidationError f)
+        )
+
+
+subsetOfFloat : (Float -> Bool) -> Type e Float
+subsetOfFloat isGood =
+    customFloat
+        (\f ->
+            if isGood f then
+                Ok f
+
+            else
+                Err (ValidationError f)
+        )
+
+
+customFloat : (Float -> Result (Error e Float) Float) -> Type e Float
+customFloat validate =
+    { fromString =
+        trim
+            >> Result.andThen
+                (\t ->
+                    case String.toFloat t of
+                        Just f ->
+                            validate f
+
+                        Nothing ->
+                            Err (ParseError t)
+                )
+    , fromValue = validate
+    , toString = String.fromFloat
     }
 
 
