@@ -3,6 +3,7 @@ module Field exposing
     , Field
     , Type
     , bool
+    , char
     , false
     , float
     , fromString
@@ -16,6 +17,7 @@ module Field exposing
     , positiveInt
     , setFromString
     , setFromValue
+    , subsetOfChar
     , subsetOfFloat
     , subsetOfInt
     , trim
@@ -31,7 +33,7 @@ type Field e a
 
 type alias State e a =
     { raw : Raw
-    , processed : Validation (Error e a) a
+    , processed : Validation (Error e) a
     }
 
 
@@ -45,8 +47,8 @@ type Raw
 
 
 type alias Type e a =
-    { fromString : String -> Result (Error e a) a
-    , fromValue : a -> Result (Error e a) a
+    { fromString : String -> Result (Error e) a
+    , fromValue : a -> Result (Error e) a
     , toString : a -> String
     }
 
@@ -74,11 +76,11 @@ subsetOfInt isGood =
                 Ok n
 
             else
-                Err (ValidationError n)
+                Err (ValidationError (String.fromInt n))
         )
 
 
-customInt : (Int -> Result (Error e Int) Int) -> Type e Int
+customInt : (Int -> Result (Error e) Int) -> Type e Int
 customInt validate =
     { fromString =
         trim
@@ -89,7 +91,7 @@ customInt validate =
                             validate n
 
                         Nothing ->
-                            Err (ParseError t)
+                            Err (FormatError t)
                 )
     , fromValue = validate
     , toString = String.fromInt
@@ -119,11 +121,11 @@ subsetOfFloat isGood =
                 Ok f
 
             else
-                Err (ValidationError f)
+                Err (ValidationError (String.fromFloat f))
         )
 
 
-customFloat : (Float -> Result (Error e Float) Float) -> Type e Float
+customFloat : (Float -> Result (Error e) Float) -> Type e Float
 customFloat validate =
     { fromString =
         trim
@@ -134,7 +136,7 @@ customFloat validate =
                             validate f
 
                         Nothing ->
-                            Err (ParseError t)
+                            Err (FormatError t)
                 )
     , fromValue = validate
     , toString = String.fromFloat
@@ -163,12 +165,8 @@ true : Type e Bool
 true =
     { fromString =
         \s ->
-            let
-                t =
-                    String.trim s
-            in
-            if String.isEmpty t then
-                Err (ValidationError False)
+            if String.isEmpty (String.trim s) then
+                Err (ValidationError s)
 
             else
                 Ok True
@@ -178,7 +176,7 @@ true =
                 Ok True
 
             else
-                Err (ValidationError False)
+                Err (ValidationError (boolToString b))
     , toString = boolToString
     }
 
@@ -187,19 +185,15 @@ false : Type e Bool
 false =
     { fromString =
         \s ->
-            let
-                t =
-                    String.trim s
-            in
-            if String.isEmpty t then
+            if String.isEmpty (String.trim s) then
                 Ok False
 
             else
-                Err (ValidationError True)
+                Err (ValidationError s)
     , fromValue =
         \b ->
             if b then
-                Err (ValidationError True)
+                Err (ValidationError (boolToString b))
 
             else
                 Ok False
@@ -216,7 +210,38 @@ boolToString b =
         "False"
 
 
-trim : String -> Result (Error e a) String
+char : Type e Char
+char =
+    subsetOfChar (always True)
+
+
+subsetOfChar : (Char -> Bool) -> Type e Char
+subsetOfChar isGood =
+    let
+        validate ch =
+            if isGood ch then
+                Ok ch
+
+            else
+                Err (ValidationError (String.fromChar ch))
+    in
+    { fromString =
+        \s ->
+            case String.uncons s of
+                Just ( ch, "" ) ->
+                    validate ch
+
+                Just _ ->
+                    Err (ValidationError s)
+
+                Nothing ->
+                    Err Required
+    , fromValue = validate
+    , toString = String.fromChar
+    }
+
+
+trim : String -> Result (Error e) String
 trim s =
     let
         t =
@@ -240,18 +265,8 @@ optional tipe =
                 Err Required ->
                     Ok Nothing
 
-                Err (ParseError t) ->
-                    Err (ParseError t)
-
-                Err (ValidationError value) ->
-                    --
-                    -- N.B. The unfortunate consequence is that we MUST use a `Maybe a`
-                    -- even though we want it to NEVER be `Nothing`.
-                    --
-                    Err (ValidationError (Just value))
-
-                Err (CustomError e) ->
-                    Err (CustomError e)
+                Err err ->
+                    Err err
     , fromValue =
         \maybeValue ->
             case maybeValue of
@@ -263,18 +278,8 @@ optional tipe =
                         Err Required ->
                             Ok Nothing
 
-                        Err (ParseError s) ->
-                            Err (ParseError s)
-
-                        Err (ValidationError value) ->
-                            --
-                            -- N.B. The unfortunate consequence is that we MUST use a `Maybe a`
-                            -- even though we want it to NEVER be `Nothing`.
-                            --
-                            Err (ValidationError (Just value))
-
-                        Err (CustomError e) ->
-                            Err (CustomError e)
+                        Err err ->
+                            Err err
 
                 Nothing ->
                     Ok Nothing
@@ -286,10 +291,10 @@ optional tipe =
 -- ERROR
 
 
-type Error e a
+type Error e
     = Required
-    | ParseError String
-    | ValidationError a
+    | FormatError String
+    | ValidationError String
     | CustomError e
 
 
@@ -349,11 +354,11 @@ mapError f (Field tipe state) =
                 Required ->
                     Required
 
-                ParseError s ->
-                    ParseError s
+                FormatError s ->
+                    FormatError s
 
-                ValidationError a ->
-                    ValidationError a
+                ValidationError s ->
+                    ValidationError s
 
                 CustomError x ->
                     CustomError (f x)
