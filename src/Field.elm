@@ -2,8 +2,6 @@ module Field exposing
     ( Error(..)
     , Field
     , Type
-    , customFloat
-    , customInt
     , float
     , fromString
     , fromValue
@@ -57,26 +55,12 @@ int =
 
 nonNegativeInt : Type e Int
 nonNegativeInt =
-    customInt
-        (\n ->
-            if n >= 0 then
-                Ok n
-
-            else
-                Err (ValidationError n)
-        )
+    subsetOfInt ((<=) 0)
 
 
 positiveInt : Type e Int
 positiveInt =
-    customInt
-        (\n ->
-            if n > 0 then
-                Ok n
-
-            else
-                Err (ValidationError n)
-        )
+    subsetOfInt ((<) 0)
 
 
 subsetOfInt : (Int -> Bool) -> Type e Int
@@ -116,26 +100,12 @@ float =
 
 nonNegativeFloat : Type e Float
 nonNegativeFloat =
-    customFloat
-        (\f ->
-            if f >= 0 then
-                Ok f
-
-            else
-                Err (ValidationError f)
-        )
+    subsetOfFloat ((<=) 0)
 
 
 positiveFloat : Type e Float
 positiveFloat =
-    customFloat
-        (\f ->
-            if f > 0 then
-                Ok f
-
-            else
-                Err (ValidationError f)
-        )
+    subsetOfFloat ((<) 0)
 
 
 subsetOfFloat : (Float -> Bool) -> Type e Float
