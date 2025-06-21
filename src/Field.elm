@@ -8,6 +8,7 @@ module Field exposing
     , int
     , mapError
     , nonNegativeInt
+    , optional
     , positiveInt
     , setFromString
     , setFromValue
@@ -23,7 +24,7 @@ type Field e a
 
 type alias State e a =
     { raw : Raw
-    , processed : Validation e a
+    , processed : Validation (Error e) a
     }
 
 
@@ -37,18 +38,18 @@ type Raw
 
 
 type alias Type e a =
-    { fromString : String -> Result e a
-    , fromValue : a -> Result e a
+    { fromString : String -> Result (Error e) a
+    , fromValue : a -> Result (Error e) a
     , toString : a -> String
     }
 
 
-int : Type Error Int
+int : Type e Int
 int =
     customInt Ok
 
 
-nonNegativeInt : Type Error Int
+nonNegativeInt : Type e Int
 nonNegativeInt =
     customInt
         (\n ->
@@ -60,7 +61,7 @@ nonNegativeInt =
         )
 
 
-positiveInt : Type Error Int
+positiveInt : Type e Int
 positiveInt =
     customInt
         (\n ->
@@ -72,7 +73,7 @@ positiveInt =
         )
 
 
-customInt : (Int -> Result Error Int) -> Type Error Int
+customInt : (Int -> Result (Error e) Int) -> Type e Int
 customInt validate =
     { fromString = trim >> Result.andThen (String.toInt >> Result.fromMaybe ParseError >> Result.andThen validate)
     , fromValue = validate
@@ -80,7 +81,7 @@ customInt validate =
     }
 
 
-trim : String -> Result Error String
+trim : String -> Result (Error e) String
 trim s =
     let
         t =
@@ -93,14 +94,55 @@ trim s =
         Ok t
 
 
+optional : Type e a -> Type e (Maybe a)
+optional tipe =
+    { fromString =
+        \s ->
+            case tipe.fromString s of
+                Ok value ->
+                    Ok (Just value)
+
+                Err Required ->
+                    Ok Nothing
+
+                Err e ->
+                    Err e
+    , fromValue =
+        \maybeValue ->
+            case maybeValue of
+                Just v1 ->
+                    case tipe.fromValue v1 of
+                        Ok v2 ->
+                            Ok (Just v2)
+
+                        Err Required ->
+                            Ok Nothing
+
+                        Err e ->
+                            Err e
+
+                Nothing ->
+                    Ok Nothing
+    , toString =
+        \maybeValue ->
+            case maybeValue of
+                Just value ->
+                    tipe.toString value
+
+                Nothing ->
+                    ""
+    }
+
+
 
 -- ERROR
 
 
-type Error
+type Error e
     = Required
     | ParseError
     | ValidationError
+    | CustomError e
 
 
 
@@ -153,11 +195,26 @@ setFromValue value (Field tipe state) =
 
 mapError : (x -> y) -> Field x a -> Field y a
 mapError f (Field tipe state) =
+    let
+        g error =
+            case error of
+                Required ->
+                    Required
+
+                ParseError ->
+                    ParseError
+
+                ValidationError ->
+                    ValidationError
+
+                CustomError x ->
+                    CustomError (f x)
+    in
     Field
-        { fromString = tipe.fromString >> Result.mapError f
-        , fromValue = tipe.fromValue >> Result.mapError f
+        { fromString = tipe.fromString >> Result.mapError g
+        , fromValue = tipe.fromValue >> Result.mapError g
         , toString = tipe.toString
         }
         { raw = state.raw
-        , processed = V.mapError f state.processed
+        , processed = V.mapError g state.processed
         }
