@@ -14,6 +14,14 @@ module Field exposing
     , fromString
     , fromValue
     , int
+    , isBlank
+    , isClean
+    , isDirty
+    , isEmpty
+    , isInvalid
+    , isNonBlank
+    , isNonEmpty
+    , isValid
     , mapError
     , nonBlankString
     , nonEmptyString
@@ -427,6 +435,68 @@ setFromValue value (Field tipe state) =
         { raw = Dirty (tipe.toString value)
         , processed = V.fromResult (tipe.fromValue value)
         }
+
+
+
+-- QUERY
+
+
+isEmpty : Field e a -> Bool
+isEmpty (Field _ { raw }) =
+    String.isEmpty <|
+        case raw of
+            Initial s ->
+                s
+
+            Dirty s ->
+                s
+
+
+isNonEmpty : Field e a -> Bool
+isNonEmpty =
+    not << isEmpty
+
+
+isBlank : Field e a -> Bool
+isBlank (Field _ { raw }) =
+    String.isEmpty <|
+        String.trim <|
+            case raw of
+                Initial s ->
+                    s
+
+                Dirty s ->
+                    s
+
+
+isNonBlank : Field e a -> Bool
+isNonBlank =
+    not << isBlank
+
+
+isClean : Field e a -> Bool
+isClean (Field _ { raw }) =
+    case raw of
+        Initial _ ->
+            True
+
+        Dirty _ ->
+            False
+
+
+isDirty : Field e a -> Bool
+isDirty =
+    not << isClean
+
+
+isValid : Field e a -> Bool
+isValid (Field _ { processed }) =
+    V.isValid processed
+
+
+isInvalid : Field e a -> Bool
+isInvalid =
+    not << isValid
 
 
 
