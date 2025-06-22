@@ -4,6 +4,11 @@ module Field exposing
     , Type
     , bool
     , char
+    , customFloat
+    , customInt
+    , customNonBlankString
+    , customNonEmptyString
+    , customString
     , false
     , float
     , fromString
@@ -285,7 +290,7 @@ optional tipe =
 
 string : Type e String
 string =
-    subsetOfString (String.trim >> Ok)
+    customString (String.trim >> Ok)
 
 
 
@@ -299,19 +304,17 @@ string =
 
 nonEmptyString : Type e String
 nonEmptyString =
-    subsetOfString
-        (\s ->
-            if String.isEmpty s then
-                Err Blank
-
-            else
-                Ok (String.trim s)
-        )
+    customNonEmptyString Ok
 
 
-subsetOfNonEmptyString : (String -> Result (Error e) String) -> Type e String
-subsetOfNonEmptyString validate =
-    subsetOfString
+subsetOfNonEmptyString : (String -> Bool) -> Type e String
+subsetOfNonEmptyString =
+    customNonEmptyString << validateStringWith
+
+
+customNonEmptyString : (String -> Result (Error e) String) -> Type e String
+customNonEmptyString validate =
+    customString
         (\s ->
             if String.isEmpty s then
                 Err Blank
@@ -323,16 +326,35 @@ subsetOfNonEmptyString validate =
 
 nonBlankString : Type e String
 nonBlankString =
-    subsetOfString trim
+    customString trim
 
 
-subsetOfNonBlankString : (String -> Result (Error e) String) -> Type e String
-subsetOfNonBlankString validate =
-    subsetOfString (trim >> Result.andThen validate)
+subsetOfNonBlankString : (String -> Bool) -> Type e String
+subsetOfNonBlankString =
+    customNonBlankString << validateStringWith
 
 
-subsetOfString : (String -> Result (Error e) String) -> Type e String
-subsetOfString validate =
+customNonBlankString : (String -> Result (Error e) String) -> Type e String
+customNonBlankString validate =
+    customString (trim >> Result.andThen validate)
+
+
+subsetOfString : (String -> Bool) -> Type e String
+subsetOfString =
+    customString << validateStringWith
+
+
+validateStringWith : (String -> Bool) -> String -> Result (Error e) String
+validateStringWith isGood s =
+    if isGood s then
+        Ok s
+
+    else
+        Err (ValidationError s)
+
+
+customString : (String -> Result (Error e) String) -> Type e String
+customString validate =
     { fromString = validate
     , fromValue = validate
     , toString = identity
