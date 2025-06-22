@@ -2,8 +2,10 @@ module Field exposing
     ( Error(..)
     , Field
     , Type
+    , allErrors
     , and
     , andFinally
+    , appendError
     , bool
     , char
     , customFloat
@@ -11,7 +13,10 @@ module Field exposing
     , customNonBlankString
     , customNonEmptyString
     , customString
+    , fail
+    , failWithErrors
     , false
+    , firstError
     , float
     , fromString
     , fromValue
@@ -25,6 +30,7 @@ module Field exposing
     , isNonBlank
     , isNonEmpty
     , isValid
+    , lastError
     , mapError
     , nonBlankString
     , nonEmptyString
@@ -33,6 +39,7 @@ module Field exposing
     , optional
     , positiveFloat
     , positiveInt
+    , prependError
     , setFromString
     , setFromValue
     , string
@@ -589,7 +596,7 @@ andFinally { onSuccess, onFailure } validation =
 
 
 
--- MAP
+-- HANDLE ERRORS
 
 
 mapError : (x -> y) -> Field x a -> Field y a
@@ -617,3 +624,43 @@ mapError f (Field tipe state) =
         { raw = state.raw
         , processed = V.mapError g state.processed
         }
+
+
+fail : Error e -> Field e a -> Field e a
+fail error (Field tipe state) =
+    Field tipe { state | processed = V.fail error }
+
+
+failWithErrors : Error e -> List (Error e) -> Field e a -> Field e a
+failWithErrors error restErrors (Field tipe state) =
+    Field tipe { state | processed = V.failWithErrors error restErrors }
+
+
+prependError : Error e -> Field e a -> Field e a
+prependError newError field =
+    failWithErrors newError (allErrors field) field
+
+
+appendError : Error e -> Field e a -> Field e a
+appendError newError field =
+    case allErrors field of
+        [] ->
+            fail newError field
+
+        error :: restErrors ->
+            failWithErrors error (restErrors ++ [ newError ]) field
+
+
+firstError : Field e a -> Maybe (Error e)
+firstError (Field _ { processed }) =
+    V.firstError processed
+
+
+lastError : Field e a -> Maybe (Error e)
+lastError (Field _ { processed }) =
+    V.lastError processed
+
+
+allErrors : Field e a -> List (Error e)
+allErrors (Field _ { processed }) =
+    V.allErrors processed
