@@ -2,6 +2,8 @@ module Field exposing
     ( Error(..)
     , Field
     , Type
+    , and
+    , andFinally
     , bool
     , char
     , customFloat
@@ -13,6 +15,7 @@ module Field exposing
     , float
     , fromString
     , fromValue
+    , get
     , int
     , isBlank
     , isClean
@@ -46,6 +49,10 @@ module Field exposing
     , toValidation
     , trim
     , true
+    , validate2
+    , validate3
+    , validate4
+    , validate5
     )
 
 import Validation as V exposing (Validation)
@@ -530,6 +537,55 @@ toString (Field tipe { processed }) =
     processed
         |> V.map tipe.toString
         |> V.withDefault ""
+
+
+
+-- APPLICATIVE
+
+
+validate2 : (a -> b -> value) -> Field x a -> Field x b -> Validation (Error x) value
+validate2 f field1 field2 =
+    V.map2 f (toValidation field1) (toValidation field2)
+
+
+validate3 : (a -> b -> c -> value) -> Field x a -> Field x b -> Field x c -> Validation (Error x) value
+validate3 f field1 field2 field3 =
+    V.map3 f (toValidation field1) (toValidation field2) (toValidation field3)
+
+
+validate4 : (a -> b -> c -> d -> value) -> Field x a -> Field x b -> Field x c -> Field x d -> Validation (Error x) value
+validate4 f field1 field2 field3 field4 =
+    V.map4 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4)
+
+
+validate5 : (a -> b -> c -> d -> e -> value) -> Field x a -> Field x b -> Field x c -> Field x d -> Field x e -> Validation (Error x) value
+validate5 f field1 field2 field3 field4 field5 =
+    V.map5 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4) (toValidation field5)
+
+
+get : Field x a -> (a -> b) -> Validation (Error x) b
+get field f =
+    V.map f (toValidation field)
+
+
+and : Field x a -> Validation (Error x) (a -> b) -> Validation (Error x) b
+and field =
+    V.apply (toValidation field)
+
+
+andFinally :
+    { onSuccess : a -> b
+    , onFailure : List (Error x) -> b
+    }
+    -> Validation (Error x) a
+    -> b
+andFinally { onSuccess, onFailure } validation =
+    case V.toResult validation of
+        Ok value ->
+            onSuccess value
+
+        Err errors ->
+            onFailure errors
 
 
 
