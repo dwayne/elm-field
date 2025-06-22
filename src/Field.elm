@@ -39,6 +39,11 @@ module Field exposing
     , subsetOfNonBlankString
     , subsetOfNonEmptyString
     , subsetOfString
+    , toMaybe
+    , toRawString
+    , toResult
+    , toString
+    , toValidation
     , trim
     , true
     )
@@ -443,13 +448,7 @@ setFromValue value (Field tipe state) =
 
 isEmpty : Field e a -> Bool
 isEmpty (Field _ { raw }) =
-    String.isEmpty <|
-        case raw of
-            Initial s ->
-                s
-
-            Dirty s ->
-                s
+    String.isEmpty (rawToString raw)
 
 
 isNonEmpty : Field e a -> Bool
@@ -459,14 +458,7 @@ isNonEmpty =
 
 isBlank : Field e a -> Bool
 isBlank (Field _ { raw }) =
-    String.isEmpty <|
-        String.trim <|
-            case raw of
-                Initial s ->
-                    s
-
-                Dirty s ->
-                    s
+    String.isEmpty (String.trim (rawToString raw))
 
 
 isNonBlank : Field e a -> Bool
@@ -497,6 +489,47 @@ isValid (Field _ { processed }) =
 isInvalid : Field e a -> Bool
 isInvalid =
     not << isValid
+
+
+
+-- CONVERT
+
+
+toRawString : Field e a -> String
+toRawString (Field _ { raw }) =
+    rawToString raw
+
+
+rawToString : Raw -> String
+rawToString raw =
+    case raw of
+        Initial s ->
+            s
+
+        Dirty s ->
+            s
+
+
+toMaybe : Field e a -> Maybe a
+toMaybe =
+    V.toMaybe << toValidation
+
+
+toResult : Field e a -> Result (List (Error e)) a
+toResult =
+    V.toResult << toValidation
+
+
+toValidation : Field e a -> Validation (Error e) a
+toValidation (Field _ { processed }) =
+    processed
+
+
+toString : Field e a -> String
+toString (Field tipe { processed }) =
+    processed
+        |> V.map tipe.toString
+        |> V.withDefault ""
 
 
 
