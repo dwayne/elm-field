@@ -1,7 +1,9 @@
-module Data.SignUp exposing
+module Example2.Data.SignUp exposing
     ( Error(..)
+    , Fields
     , SignUp
     , Submission
+    , errorToString
     , init
     , setEmail
     , setPassword
@@ -11,11 +13,11 @@ module Data.SignUp exposing
     , toFields
     )
 
-import Data.Email as Email exposing (Email)
-import Data.Password as Password exposing (Password)
-import Data.PasswordConfirmation as PasswordConfirmation
-import Data.Username as Username exposing (Username)
-import Field as F
+import Example2.Data.Email as Email exposing (Email)
+import Example2.Data.Password as Password exposing (Password)
+import Example2.Data.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
+import Example2.Data.Username as Username exposing (Username)
+import Field.Advanced as F
 
 
 type SignUp
@@ -23,10 +25,10 @@ type SignUp
 
 
 type alias Fields =
-    { username : F.Field (F.Error Username.Error) Username
-    , email : F.Field (F.Error ()) Email
-    , password : F.Field (F.Error Password.Error) Password
-    , passwordConfirmation : F.Field (F.Error PasswordConfirmation.Error) Password
+    { username : F.Field Username.Error Username
+    , email : F.Field Email.Error Email
+    , password : F.Field Password.Error Password
+    , passwordConfirmation : F.Field PasswordConfirmation.Error PasswordConfirmation
     }
 
 
@@ -69,16 +71,16 @@ setPasswordConfirmation s (SignUp fields) =
 
 
 updatePasswordConfirmation :
-    F.Field (F.Error Password.Error) Password
-    -> F.Field (F.Error PasswordConfirmation.Error) Password
-    -> F.Field (F.Error PasswordConfirmation.Error) Password
+    F.Field Password.Error Password
+    -> F.Field PasswordConfirmation.Error PasswordConfirmation
+    -> F.Field PasswordConfirmation.Error PasswordConfirmation
 updatePasswordConfirmation passwordField passwordConfirmationField =
     (\password passwordConfirmation ->
-        if password == passwordConfirmation then
+        if Password.toString password == PasswordConfirmation.toString passwordConfirmation then
             passwordConfirmationField
 
         else
-            F.fail (F.CustomError PasswordConfirmation.Mismatch) passwordConfirmationField
+            F.setError PasswordConfirmation.Mismatch passwordConfirmationField
     )
         |> Just
         |> F.applyMaybe passwordField
@@ -87,10 +89,10 @@ updatePasswordConfirmation passwordField passwordConfirmationField =
 
 
 type Error
-    = UsernameError (F.Error Username.Error)
-    | EmailError (F.Error ())
-    | PasswordError (F.Error Password.Error)
-    | PasswordConfirmationError (F.Error PasswordConfirmation.Error)
+    = UsernameError Username.Error
+    | EmailError Email.Error
+    | PasswordError Password.Error
+    | PasswordConfirmationError PasswordConfirmation.Error
 
 
 type alias Submission =
@@ -102,12 +104,30 @@ type alias Submission =
 
 submit : SignUp -> Result (List Error) Submission
 submit (SignUp fields) =
-    Submission
+    (\username email password _ ->
+        Submission username email password
+    )
         |> F.get (fields.username |> F.mapError UsernameError)
         |> F.and (fields.email |> F.mapError EmailError)
         |> F.and (fields.password |> F.mapError PasswordError)
-        |> F.andIgnore (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
+        |> F.and (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
         |> F.andResult
+
+
+errorToString : Error -> String
+errorToString error =
+    case error of
+        UsernameError e ->
+            Username.errorToString e
+
+        EmailError e ->
+            Email.errorToString e
+
+        PasswordError e ->
+            Password.errorToString e
+
+        PasswordConfirmationError e ->
+            PasswordConfirmation.errorToString e
 
 
 toFields : SignUp -> Fields

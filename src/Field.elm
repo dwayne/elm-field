@@ -1,18 +1,19 @@
 module Field exposing
-    ( Error(..)
+    ( Error
     , Field
     , Type
     , allErrors
     , and
     , andFinally
-    , andIgnore
     , andMaybe
     , andResult
     , appendError
     , applyMaybe
     , applyResult
+    , blankError
     , bool
     , char
+    , customError
     , customFloat
     , customInt
     , customNonBlankString
@@ -20,6 +21,7 @@ module Field exposing
     , customString
     , customType
     , empty
+    , errorToString
     , fail
     , failWithErrors
     , false
@@ -39,7 +41,6 @@ module Field exposing
     , isValid
     , lastError
     , mapError
-    , mapErrorType
     , nonBlankString
     , nonEmptyString
     , nonNegativeFloat
@@ -48,6 +49,8 @@ module Field exposing
     , positiveFloat
     , positiveInt
     , prependError
+    , setError
+    , setErrors
     , setFromString
     , setFromValue
     , string
@@ -58,6 +61,7 @@ module Field exposing
     , subsetOfNonEmptyString
     , subsetOfString
     , subsetOfType
+    , syntaxError
     , toMaybe
     , toRawString
     , toResult
@@ -69,689 +73,442 @@ module Field exposing
     , validate3
     , validate4
     , validate5
+    , validationError
     , withDefault
     )
 
+import Field.Advanced as F
 import Validation as V exposing (Validation)
 
 
-type Field e a
-    = Field (Type e a) (State e a)
+
+-- FIELD
 
 
-type alias State e a =
-    { raw : Raw
-    , processed : Validation e a
-    }
-
-
-type Raw
-    = Initial String
-    | Dirty String
+type alias Field a =
+    F.Field Error a
 
 
 
 -- TYPE
 
 
-type alias Type e a =
-    { fromString : String -> Result e a
-    , fromValue : a -> Result e a
-    , toString : a -> String
-    }
+type alias Type a =
+    F.Type Error a
 
 
-int : Type (Error e) Int
+int : Type Int
 int =
-    customInt Ok
+    F.int
 
 
-nonNegativeInt : Type (Error e) Int
+nonNegativeInt : Type Int
 nonNegativeInt =
-    subsetOfInt ((<=) 0)
+    F.nonNegativeInt
 
 
-positiveInt : Type (Error e) Int
+positiveInt : Type Int
 positiveInt =
-    subsetOfInt ((<) 0)
+    F.positiveInt
 
 
-subsetOfInt : (Int -> Bool) -> Type (Error e) Int
-subsetOfInt isGood =
-    customInt
-        (\n ->
-            if isGood n then
-                Ok n
-
-            else
-                Err (ValidationError (String.fromInt n))
-        )
+subsetOfInt : (Int -> Bool) -> Type Int
+subsetOfInt =
+    F.subsetOfInt
 
 
-customInt : (Int -> Result (Error e) Int) -> Type (Error e) Int
-customInt validate =
-    { fromString =
-        trim
-            (\s ->
-                case String.toInt s of
-                    Just n ->
-                        validate n
-
-                    Nothing ->
-                        Err (SyntaxError s)
-            )
-    , fromValue = validate
-    , toString = String.fromInt
-    }
+customInt : (Int -> Result Error Int) -> Type Int
+customInt =
+    F.customInt
 
 
-float : Type (Error e) Float
+float : Type Float
 float =
-    customFloat Ok
+    F.float
 
 
-nonNegativeFloat : Type (Error e) Float
+nonNegativeFloat : Type Float
 nonNegativeFloat =
-    subsetOfFloat ((<=) 0)
+    F.nonNegativeFloat
 
 
-positiveFloat : Type (Error e) Float
+positiveFloat : Type Float
 positiveFloat =
-    subsetOfFloat ((<) 0)
+    F.positiveFloat
 
 
-subsetOfFloat : (Float -> Bool) -> Type (Error e) Float
-subsetOfFloat isGood =
-    customFloat
-        (\f ->
-            if isGood f then
-                Ok f
-
-            else
-                Err (ValidationError (String.fromFloat f))
-        )
+subsetOfFloat : (Float -> Bool) -> Type Float
+subsetOfFloat =
+    F.subsetOfFloat
 
 
-customFloat : (Float -> Result (Error e) Float) -> Type (Error e) Float
-customFloat validate =
-    { fromString =
-        trim
-            (\s ->
-                case String.toFloat s of
-                    Just f ->
-                        validate f
-
-                    Nothing ->
-                        Err (SyntaxError s)
-            )
-    , fromValue = validate
-    , toString = String.fromFloat
-    }
+customFloat : (Float -> Result Error Float) -> Type Float
+customFloat =
+    F.customFloat
 
 
-bool : Type (Error e) Bool
+bool : Type Bool
 bool =
-    { fromString =
-        \s ->
-            let
-                t =
-                    String.trim s
-            in
-            if String.isEmpty t then
-                Ok False
-
-            else
-                Ok True
-    , fromValue = Ok
-    , toString = boolToString
-    }
+    F.bool
 
 
-true : Type (Error e) Bool
+true : Type Bool
 true =
-    { fromString =
-        \s ->
-            if String.isEmpty (String.trim s) then
-                Err (ValidationError s)
-
-            else
-                Ok True
-    , fromValue =
-        \b ->
-            if b then
-                Ok True
-
-            else
-                Err (ValidationError (boolToString b))
-    , toString = boolToString
-    }
+    F.true
 
 
-false : Type (Error e) Bool
+false : Type Bool
 false =
-    { fromString =
-        \s ->
-            if String.isEmpty (String.trim s) then
-                Ok False
-
-            else
-                Err (ValidationError s)
-    , fromValue =
-        \b ->
-            if b then
-                Err (ValidationError (boolToString b))
-
-            else
-                Ok False
-    , toString = boolToString
-    }
+    F.false
 
 
-boolToString : Bool -> String
-boolToString b =
-    if b then
-        "True"
-
-    else
-        "False"
-
-
-char : Type (Error e) Char
+char : Type Char
 char =
-    subsetOfChar (always True)
+    F.char
 
 
-subsetOfChar : (Char -> Bool) -> Type (Error e) Char
-subsetOfChar isGood =
-    let
-        validate ch =
-            if isGood ch then
-                Ok ch
-
-            else
-                Err (ValidationError (String.fromChar ch))
-    in
-    { fromString =
-        \s ->
-            case String.uncons s of
-                Just ( ch, "" ) ->
-                    validate ch
-
-                Just _ ->
-                    Err (ValidationError s)
-
-                Nothing ->
-                    Err Blank
-    , fromValue = validate
-    , toString = String.fromChar
-    }
+subsetOfChar : (Char -> Bool) -> Type Char
+subsetOfChar =
+    F.subsetOfChar
 
 
-optional : Type (Error e) a -> Type (Error e) (Maybe a)
-optional tipe =
-    --
-    -- I don't think it would be wise to use optional with string fields.
-    --
-    { fromString =
-        \s ->
-            case tipe.fromString s of
-                Ok value ->
-                    Ok (Just value)
-
-                Err Blank ->
-                    Ok Nothing
-
-                Err err ->
-                    Err err
-    , fromValue =
-        \maybeValue ->
-            case maybeValue of
-                Just v1 ->
-                    case tipe.fromValue v1 of
-                        Ok v2 ->
-                            Ok (Just v2)
-
-                        Err Blank ->
-                            Ok Nothing
-
-                        Err err ->
-                            Err err
-
-                Nothing ->
-                    Ok Nothing
-    , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
-    }
+optional : Type a -> Type (Maybe a)
+optional =
+    F.optional
 
 
-string : Type (Error e) String
+string : Type String
 string =
-    customString (String.trim >> Ok)
+    F.string
 
 
-
---
--- Empty string -> ""
--- Blank string -> "", " ", "  ", " \t ", "\n \t \r"
---
--- Blank includes the empty string as well as strings consisting entirely of whitespace characters.
---
-
-
-nonEmptyString : Type (Error e) String
+nonEmptyString : Type String
 nonEmptyString =
-    customNonEmptyString Ok
+    F.nonEmptyString
 
 
-subsetOfNonEmptyString : (String -> Bool) -> Type (Error e) String
+subsetOfNonEmptyString : (String -> Bool) -> Type String
 subsetOfNonEmptyString =
-    customNonEmptyString << validateStringWith
+    F.subsetOfNonEmptyString
 
 
-customNonEmptyString : (String -> Result (Error e) String) -> Type (Error e) String
-customNonEmptyString validate =
-    customString
-        (\s ->
-            if String.isEmpty s then
-                Err Blank
-
-            else
-                validate (String.trim s)
-        )
+customNonEmptyString : (String -> Result Error String) -> Type String
+customNonEmptyString =
+    F.customNonEmptyString
 
 
-nonBlankString : Type (Error e) String
+nonBlankString : Type String
 nonBlankString =
-    customString (trim Ok)
+    F.nonBlankString
 
 
-subsetOfNonBlankString : (String -> Bool) -> Type (Error e) String
+subsetOfNonBlankString : (String -> Bool) -> Type String
 subsetOfNonBlankString =
-    customNonBlankString << validateStringWith
+    F.subsetOfNonBlankString
 
 
-customNonBlankString : (String -> Result (Error e) String) -> Type (Error e) String
-customNonBlankString validate =
-    customString (trim validate)
+customNonBlankString : (String -> Result Error String) -> Type String
+customNonBlankString =
+    F.customNonBlankString
 
 
-subsetOfString : (String -> Bool) -> Type (Error e) String
+subsetOfString : (String -> Bool) -> Type String
 subsetOfString =
-    customString << validateStringWith
+    F.subsetOfString
 
 
-validateStringWith : (String -> Bool) -> String -> Result (Error e) String
-validateStringWith isGood s =
-    if isGood s then
-        Ok s
-
-    else
-        Err (ValidationError s)
-
-
-customString : (String -> Result (Error e) String) -> Type (Error e) String
-customString validate =
-    { fromString = validate
-    , fromValue = validate
-    , toString = identity
-    }
+customString : (String -> Result Error String) -> Type String
+customString =
+    F.customString
 
 
 customType :
-    { fromString : String -> Result (Error e) a
+    { fromString : String -> Result Error a
     , toString : a -> String
     }
-    -> Type (Error e) a
-customType options =
-    { fromString = options.fromString
-    , fromValue = Ok
-    , toString = options.toString
-    }
+    -> Type a
+customType =
+    F.customType
 
 
-subsetOfType : (a -> Bool) -> Type (Error e) a -> Type (Error e) a
-subsetOfType isGood tipe =
-    let
-        validate value =
-            if isGood value then
-                Ok value
-
-            else
-                Err (ValidationError (tipe.toString value))
-    in
-    { fromString = tipe.fromString >> Result.andThen validate
-    , fromValue = tipe.fromValue >> Result.andThen validate
-    , toString = tipe.toString
-    }
+subsetOfType : (a -> Bool) -> Type a -> Type a
+subsetOfType =
+    F.subsetOfType
 
 
-trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
-trim f s =
-    let
-        t =
-            String.trim s
-    in
-    if String.isEmpty t then
-        Err Blank
-
-    else
-        f t
-
-
-
--- ERROR
-
-
-type Error e
-    = Blank
-    | SyntaxError String
-    | ValidationError String
-    | CustomError e
+trim : (String -> Result Error a) -> String -> Result Error a
+trim =
+    F.trim
 
 
 
 -- CONSTRUCT
 
 
-empty : Type e a -> Field e a
-empty tipe =
-    fromString tipe ""
+empty : F.Type e a -> F.Field e a
+empty =
+    F.empty
 
 
-fromString : Type e a -> String -> Field e a
-fromString tipe s =
-    Field
-        tipe
-        { raw = Initial s
-        , processed = V.fromResult (tipe.fromString s)
-        }
+fromString : F.Type e a -> String -> F.Field e a
+fromString =
+    F.fromString
 
 
-fromValue : Type e a -> a -> Field e a
-fromValue tipe value =
-    Field
-        tipe
-        { raw = Initial (tipe.toString value)
-        , processed = V.fromResult (tipe.fromValue value)
-        }
+fromValue : F.Type e a -> a -> F.Field e a
+fromValue =
+    F.fromValue
 
 
 
 -- CHANGE
 
 
-setFromString : String -> Field e a -> Field e a
-setFromString s (Field tipe state) =
-    Field
-        tipe
-        { raw = Dirty s
-        , processed = V.fromResult (tipe.fromString s)
-        }
+setFromString : String -> Field a -> Field a
+setFromString =
+    F.setFromString
 
 
-setFromValue : a -> Field e a -> Field e a
-setFromValue value (Field tipe state) =
-    Field
-        tipe
-        { raw = Dirty (tipe.toString value)
-        , processed = V.fromResult (tipe.fromValue value)
-        }
+setFromValue : a -> Field a -> Field a
+setFromValue =
+    F.setFromValue
+
+
+setError : String -> Field a -> Field a
+setError =
+    F.setError
+
+
+setErrors : String -> List String -> Field a -> Field a
+setErrors =
+    F.setErrors
 
 
 
 -- QUERY
 
 
-isEmpty : Field e a -> Bool
-isEmpty (Field _ { raw }) =
-    String.isEmpty (rawToString raw)
+isEmpty : F.Field e a -> Bool
+isEmpty =
+    F.isEmpty
 
 
-isNonEmpty : Field e a -> Bool
+isNonEmpty : F.Field e a -> Bool
 isNonEmpty =
-    not << isEmpty
+    F.isNonEmpty
 
 
-isBlank : Field e a -> Bool
-isBlank (Field _ { raw }) =
-    String.isEmpty (String.trim (rawToString raw))
+isBlank : F.Field e a -> Bool
+isBlank =
+    F.isBlank
 
 
-isNonBlank : Field e a -> Bool
+isNonBlank : F.Field e a -> Bool
 isNonBlank =
-    not << isBlank
+    F.isNonBlank
 
 
-isClean : Field e a -> Bool
-isClean (Field _ { raw }) =
-    case raw of
-        Initial _ ->
-            True
-
-        Dirty _ ->
-            False
+isClean : F.Field e a -> Bool
+isClean =
+    F.isClean
 
 
-isDirty : Field e a -> Bool
+isDirty : F.Field e a -> Bool
 isDirty =
-    not << isClean
+    F.isDirty
 
 
-isValid : Field e a -> Bool
-isValid (Field _ { processed }) =
-    V.isValid processed
+isValid : F.Field e a -> Bool
+isValid =
+    F.isValid
 
 
-isInvalid : Field e a -> Bool
+isInvalid : F.Field e a -> Bool
 isInvalid =
-    not << isValid
+    F.isInvalid
 
 
 
 -- CONVERT
 
 
-toRawString : Field e a -> String
-toRawString (Field _ { raw }) =
-    rawToString raw
+toRawString : F.Field e a -> String
+toRawString =
+    F.toRawString
 
 
-rawToString : Raw -> String
-rawToString raw =
-    case raw of
-        Initial s ->
-            s
-
-        Dirty s ->
-            s
-
-
-withDefault : a -> Field e a -> a
-withDefault default =
-    V.withDefault default << toValidation
-
-
-toMaybe : Field e a -> Maybe a
+toMaybe : F.Field e a -> Maybe a
 toMaybe =
-    V.toMaybe << toValidation
+    F.toMaybe
 
 
-toResult : Field e a -> Result (List e) a
+toResult : F.Field e a -> Result (List e) a
 toResult =
-    V.toResult << toValidation
+    F.toResult
 
 
-toValidation : Field e a -> Validation e a
-toValidation (Field _ { processed }) =
-    processed
+toValidation : F.Field e a -> Validation e a
+toValidation =
+    F.toValidation
 
 
-toString : Field e a -> String
-toString (Field tipe { processed }) =
-    processed
-        |> V.map tipe.toString
-        |> V.withDefault ""
+toString : F.Field e a -> String
+toString =
+    F.toString
 
 
 
 -- APPLICATIVE
 
 
-applyMaybe : Field e a -> Maybe (a -> b) -> Maybe b
-applyMaybe field mf =
-    case ( toMaybe field, mf ) of
-        ( Just a, Just f ) ->
-            Just (f a)
-
-        _ ->
-            Nothing
+applyMaybe : F.Field e a -> Maybe (a -> b) -> Maybe b
+applyMaybe =
+    F.applyMaybe
 
 
-applyResult : Field e a -> Result (List e) (a -> b) -> Result (List e) b
-applyResult field rf =
-    case ( toResult field, rf ) of
-        ( Ok a, Ok f ) ->
-            Ok (f a)
-
-        ( Err e1, _ ) ->
-            Err e1
-
-        ( _, Err e2 ) ->
-            Err e2
+applyResult : F.Field e a -> Result (List e) (a -> b) -> Result (List e) b
+applyResult =
+    F.applyResult
 
 
-validate2 : (a -> b -> value) -> Field x a -> Field x b -> Validation x value
-validate2 f field1 field2 =
-    V.map2 f (toValidation field1) (toValidation field2)
+validate2 : (a -> b -> value) -> F.Field x a -> F.Field x b -> Validation x value
+validate2 =
+    F.validate2
 
 
-validate3 : (a -> b -> c -> value) -> Field x a -> Field x b -> Field x c -> Validation x value
-validate3 f field1 field2 field3 =
-    V.map3 f (toValidation field1) (toValidation field2) (toValidation field3)
+validate3 : (a -> b -> c -> value) -> F.Field x a -> F.Field x b -> F.Field x c -> Validation x value
+validate3 =
+    F.validate3
 
 
-validate4 : (a -> b -> c -> d -> value) -> Field x a -> Field x b -> Field x c -> Field x d -> Validation x value
-validate4 f field1 field2 field3 field4 =
-    V.map4 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4)
+validate4 : (a -> b -> c -> d -> value) -> F.Field x a -> F.Field x b -> F.Field x c -> F.Field x d -> Validation x value
+validate4 =
+    F.validate4
 
 
-validate5 : (a -> b -> c -> d -> e -> value) -> Field x a -> Field x b -> Field x c -> Field x d -> Field x e -> Validation x value
-validate5 f field1 field2 field3 field4 field5 =
-    V.map5 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4) (toValidation field5)
+validate5 : (a -> b -> c -> d -> e -> value) -> F.Field x a -> F.Field x b -> F.Field x c -> F.Field x d -> F.Field x e -> Validation x value
+validate5 =
+    F.validate5
 
 
-get : Field x a -> (a -> b) -> Validation x b
-get field f =
-    V.map f (toValidation field)
+get : F.Field e a -> (a -> b) -> Validation e b
+get =
+    F.get
 
 
-and : Field x a -> Validation x (a -> b) -> Validation x b
-and field =
-    V.apply (toValidation field)
+and : F.Field e a -> Validation e (a -> b) -> Validation e b
+and =
+    F.and
 
 
-andIgnore : Field x a -> Validation x b -> Validation x b
-andIgnore field vb =
-    V.andThen (always vb) (toValidation field)
+withDefault : a -> Validation e a -> a
+withDefault =
+    F.withDefault
 
 
-andMaybe : Validation x a -> Maybe a
+andMaybe : Validation e a -> Maybe a
 andMaybe =
-    andFinally
-        { onSuccess = Just
-        , onFailure = always Nothing
-        }
+    F.andMaybe
 
 
-andResult : Validation x a -> Result (List x) a
+andResult : Validation e a -> Result (List e) a
 andResult =
-    andFinally
-        { onSuccess = Ok
-        , onFailure = Err
-        }
+    F.andResult
 
 
 andFinally :
     { onSuccess : a -> b
-    , onFailure : List x -> b
+    , onFailure : List e -> b
     }
-    -> Validation x a
+    -> Validation e a
     -> b
-andFinally { onSuccess, onFailure } validation =
-    case V.toResult validation of
-        Ok value ->
-            onSuccess value
+andFinally =
+    F.andFinally
 
-        Err errors ->
-            onFailure errors
+
+
+-- ERROR
+
+
+type alias Error =
+    F.Error String
+
+
+blankError : Error
+blankError =
+    F.blankError
+
+
+syntaxError : String -> Error
+syntaxError =
+    F.syntaxError
+
+
+validationError : String -> Error
+validationError =
+    F.validationError
+
+
+customError : String -> Error
+customError =
+    F.customError
+
+
+errorToString :
+    { onBlank : String
+    , onSyntaxError : String -> String
+    , onValidationError : String -> String
+    }
+    -> Error
+    -> String
+errorToString { onBlank, onSyntaxError, onValidationError } =
+    F.errorToString
+        { onBlank = onBlank
+        , onSyntaxError = onSyntaxError
+        , onValidationError = onValidationError
+        , onCustomError = identity
+        }
 
 
 
 -- HANDLE ERRORS
 
 
-mapError : (x -> y) -> Field x a -> Field y a
-mapError f (Field tipe state) =
-    Field
-        { fromString = tipe.fromString >> Result.mapError f
-        , fromValue = tipe.fromValue >> Result.mapError f
-        , toString = tipe.toString
-        }
-        { raw = state.raw
-        , processed = V.mapError f state.processed
-        }
+mapError : (x -> y) -> F.Field x a -> F.Field y a
+mapError =
+    F.mapError
 
 
-mapErrorType : (x -> y) -> Error x -> Error y
-mapErrorType f error =
-    case error of
-        Blank ->
-            Blank
-
-        SyntaxError s ->
-            SyntaxError s
-
-        ValidationError s ->
-            ValidationError s
-
-        CustomError x ->
-            CustomError (f x)
+fail : Error -> Field a -> Field a
+fail =
+    F.fail
 
 
-fail : e -> Field e a -> Field e a
-fail error (Field tipe state) =
-    Field tipe { state | processed = V.fail error }
+failWithErrors : Error -> List Error -> Field a -> Field a
+failWithErrors =
+    F.failWithErrors
 
 
-failWithErrors : e -> List e -> Field e a -> Field e a
-failWithErrors error restErrors (Field tipe state) =
-    Field tipe { state | processed = V.failWithErrors error restErrors }
+prependError : Error -> Field a -> Field a
+prependError =
+    F.prependError
 
 
-prependError : e -> Field e a -> Field e a
-prependError newError field =
-    failWithErrors newError (allErrors field) field
+appendError : Error -> Field a -> Field a
+appendError =
+    F.appendError
 
 
-appendError : e -> Field e a -> Field e a
-appendError newError field =
-    case allErrors field of
-        [] ->
-            fail newError field
-
-        error :: restErrors ->
-            failWithErrors error (restErrors ++ [ newError ]) field
+firstError : Field a -> Maybe Error
+firstError =
+    F.firstError
 
 
-firstError : Field e a -> Maybe e
-firstError (Field _ { processed }) =
-    V.firstError processed
+lastError : Field a -> Maybe Error
+lastError =
+    F.lastError
 
 
-lastError : Field e a -> Maybe e
-lastError (Field _ { processed }) =
-    V.lastError processed
-
-
-allErrors : Field e a -> List e
-allErrors (Field _ { processed }) =
-    V.allErrors processed
+allErrors : Field a -> List Error
+allErrors =
+    F.allErrors
