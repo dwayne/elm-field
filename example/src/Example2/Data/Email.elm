@@ -1,7 +1,6 @@
 module Example2.Data.Email exposing
     ( Email
     , Error
-    , errorToString
     , fieldType
     , fromString
     , toString
@@ -40,14 +39,4 @@ fieldType =
     F.customType
         { fromString = fromString
         , toString = toString
-        }
-
-
-errorToString : Error -> String
-errorToString =
-    F.errorToString
-        { onBlank = "The email is required."
-        , onSyntaxError = always "The email is not valid."
-        , onValidationError = always ""
-        , onCustomError = always ""
         }

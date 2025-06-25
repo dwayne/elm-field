@@ -2,7 +2,6 @@ module Example2.Data.Username exposing
     ( CustomError(..)
     , Error
     , Username
-    , errorToString
     , fieldType
     , fromString
     , toString
@@ -53,21 +52,4 @@ fieldType =
     F.customType
         { fromString = fromString
         , toString = toString
-        }
-
-
-errorToString : Error -> String
-errorToString =
-    F.errorToString
-        { onBlank = "The username is required."
-        , onSyntaxError = always ""
-        , onValidationError = always ""
-        , onCustomError =
-            \e ->
-                case e of
-                    TooShort _ ->
-                        "The username must have at least 3 characters."
-
-                    TooLong _ ->
-                        "The username must have at most 25 characters."
         }

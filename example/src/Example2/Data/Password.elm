@@ -2,7 +2,6 @@ module Example2.Data.Password exposing
     ( CustomError(..)
     , Error
     , Password
-    , errorToString
     , fieldType
     , fromString
     , toString
@@ -21,7 +20,7 @@ type alias Error =
 
 type CustomError
     = TooShort Int
-    | MissingRequiredChars
+    | MissingRequiredChars String
 
 
 fromString : String -> Result Error Password
@@ -39,7 +38,7 @@ fromString =
                 Ok (Password s)
 
             else
-                Err (F.customError MissingRequiredChars)
+                Err (F.customError <| MissingRequiredChars "!@#$%^&*")
         )
 
 
@@ -67,21 +66,4 @@ fieldType =
     F.customType
         { fromString = fromString
         , toString = toString
-        }
-
-
-errorToString : Error -> String
-errorToString =
-    F.errorToString
-        { onBlank = "The password is required."
-        , onSyntaxError = always ""
-        , onValidationError = always ""
-        , onCustomError =
-            \e ->
-                case e of
-                    TooShort _ ->
-                        "The password must have at least 8 characters."
-
-                    MissingRequiredChars ->
-                        "The password must contain at least 1 of each of the following: a lowercase character, an uppercase character, a number, and a special character in the set \"(!@#$%^&*)\"."
         }

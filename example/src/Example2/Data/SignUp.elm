@@ -3,7 +3,6 @@ module Example2.Data.SignUp exposing
     , Fields
     , SignUp
     , Submission
-    , errorToString
     , init
     , setEmail
     , setPassword
@@ -112,22 +111,6 @@ submit (SignUp fields) =
         |> F.and (fields.password |> F.mapError PasswordError)
         |> F.and (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
         |> F.andResult
-
-
-errorToString : Error -> String
-errorToString error =
-    case error of
-        UsernameError e ->
-            Username.errorToString e
-
-        EmailError e ->
-            Email.errorToString e
-
-        PasswordError e ->
-            Password.errorToString e
-
-        PasswordConfirmationError e ->
-            PasswordConfirmation.errorToString e
 
 
 toFields : SignUp -> Fields

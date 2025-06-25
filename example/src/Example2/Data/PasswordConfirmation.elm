@@ -2,7 +2,6 @@ module Example2.Data.PasswordConfirmation exposing
     ( CustomError(..)
     , Error
     , PasswordConfirmation
-    , errorToString
     , fieldType
     , fromString
     , toString
@@ -38,14 +37,4 @@ fieldType =
     F.customType
         { fromString = fromString
         , toString = toString
-        }
-
-
-errorToString : Error -> String
-errorToString =
-    F.errorToString
-        { onBlank = "The password confirmation is required."
-        , onSyntaxError = always ""
-        , onValidationError = always ""
-        , onCustomError = always "The password confirmation does not match."
         }
