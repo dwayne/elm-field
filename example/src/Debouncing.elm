@@ -3,10 +3,10 @@ module Debouncing exposing (main)
 import Browser as B
 import Browser.Dom as BD
 import Example1.Data.Username as Username exposing (Username)
-import Field as F
+import Field as F exposing (Field)
 import Html as H
 import Html.Attributes as HA
-import Lib.DebouncedField as DF
+import Lib.DebouncedInput as DebouncedInput exposing (DebouncedInput)
 import Lib.Timer as Timer exposing (Timer)
 import Random
 import Task
@@ -28,7 +28,8 @@ main =
 
 type alias Model =
     { status : Status
-    , username : DebouncedField Username
+    , username : Field Username
+    , usernameDebouncedInput : DebouncedInput
     , timer : Timer
     }
 
@@ -40,14 +41,11 @@ type Status
     | Error
 
 
-type alias DebouncedField a =
-    DF.DebouncedField F.Error a
-
-
 init : () -> ( Model, Cmd msg )
 init _ =
     ( { status = Normal
-      , username = DF.fromField (F.empty Username.fieldType)
+      , username = F.empty Username.fieldType
+      , usernameDebouncedInput = DebouncedInput.init
       , timer = Timer.init
       }
     , Cmd.none
@@ -59,21 +57,22 @@ init _ =
 
 
 type Msg
-    = InputUsername
-    | ReadyToCheck Username
-    | ChangedUsername DF.Msg
+    = InputUsername String
+    | ReadyUsername String
+    | FocusUsername
+    | ChangedUsernameDebouncedInput DebouncedInput.Msg
     | TimerExpired
     | ChangedTimer Timer.Msg
     | GotResult Bool
-    | FocusUsername
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        InputUsername ->
+        InputUsername s ->
             ( { model
                 | status = Normal
+                , username = F.setFromString s model.username
                 , timer =
                     case model.status of
                         Checking _ ->
@@ -85,21 +84,35 @@ update msg model =
             , Cmd.none
             )
 
-        ReadyToCheck username ->
+        ReadyUsername s ->
             let
+                usernameField =
+                    F.setFromString s model.username
+
                 ( timer, cmd ) =
                     Timer.setTimeout timerConfig model.timer
+
+                newModel =
+                    { model | username = usernameField, timer = timer }
             in
-            ( { model | status = Checking username, timer = timer }
+            ( case F.toMaybe usernameField of
+                Just username ->
+                    { newModel | status = Checking username }
+
+                Nothing ->
+                    newModel
             , cmd
             )
 
-        ChangedUsername subMsg ->
+        FocusUsername ->
+            ( model, Cmd.none )
+
+        ChangedUsernameDebouncedInput subMsg ->
             let
-                ( username, cmd ) =
-                    DF.update usernameConfig subMsg model.username
+                ( usernameDebouncedInput, cmd ) =
+                    DebouncedInput.update usernameDebouncedInputConfig subMsg model.usernameDebouncedInput
             in
-            ( { model | username = username }
+            ( { model | usernameDebouncedInput = usernameDebouncedInput }
             , cmd
             )
 
@@ -134,9 +147,6 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        FocusUsername ->
-            ( model, Cmd.none )
-
 
 focus : String -> msg -> Cmd msg
 focus id msg =
@@ -144,13 +154,13 @@ focus id msg =
         |> Task.attempt (always msg)
 
 
-usernameConfig : DF.Config Username Msg
-usernameConfig =
-    DF.trailing
+usernameDebouncedInputConfig : DebouncedInput.Config Msg
+usernameDebouncedInputConfig =
+    DebouncedInput.trailing
         { wait = 500
-        , onInput = always InputUsername
-        , onReady = ReadyToCheck
-        , onChange = ChangedUsername
+        , onInput = InputUsername
+        , onReady = ReadyUsername
+        , onChange = ChangedUsernameDebouncedInput
         }
 
 
@@ -171,8 +181,9 @@ view : Model -> H.Html Msg
 view model =
     H.form [ HA.style "margin" "10px" ]
         [ H.label [ HA.for "username" ] [ H.text "Username: " ]
-        , DF.view
+        , DebouncedInput.view
             { field = model.username
+            , debouncedInput = model.usernameDebouncedInput
             , isRequired = True
             , isDisabled =
                 case model.status of
@@ -181,7 +192,7 @@ view model =
 
                     _ ->
                         False
-            , config = usernameConfig
+            , config = usernameDebouncedInputConfig
             , attrs =
                 [ HA.autofocus True
                 , HA.id "username"
