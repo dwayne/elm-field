@@ -31,7 +31,7 @@ view { field, isRequired, isDisabled, onInput, attrs } =
 
         dataEmptyAttrs =
             if F.isEmpty field then
-                [ HA.attribute "data-field-empty" ""
+                [ HA.attribute "data-input-empty" ""
                 ]
 
             else
@@ -44,13 +44,13 @@ view { field, isRequired, isDisabled, onInput, attrs } =
 
               else
                 HE.onInput onInput
-            , HA.attribute "data-field-state" <|
+            , HA.attribute "data-input-state" <|
                 if F.isClean field then
                     "clean"
 
                 else
                     "dirty"
-            , HA.attribute "data-field-validity" <|
+            , HA.attribute "data-input-validity" <|
                 if F.isValid field then
                     "valid"
 
