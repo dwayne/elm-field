@@ -1,11 +1,6 @@
 module Lib.InteractiveInput exposing
     ( InputOptions
-    , InteractiveInput
-    , Msg
     , ViewOptions
-    , init
-    , modify
-    , update
     , view
     )
 
@@ -14,44 +9,13 @@ import Html.Attributes as HA
 import Lib.InteractionTracker as InteractionTracker
 
 
-type alias InteractiveInput a =
-    { field : a
-    , fieldTracker : InteractionTracker.State
-    }
-
-
-init : a -> InteractiveInput a
-init field =
-    { field = field
-    , fieldTracker = InteractionTracker.init
-    }
-
-
-modify : (a -> a) -> InteractiveInput a -> InteractiveInput a
-modify f model =
-    { model | field = f model.field }
-
-
-type alias Msg msg =
-    InteractionTracker.Msg msg
-
-
-update : Msg msg -> InteractiveInput a -> ( InteractiveInput a, Cmd msg )
-update msg model =
-    let
-        ( fieldTracker, cmd ) =
-            InteractionTracker.update msg model.fieldTracker
-    in
-    ( { model | fieldTracker = fieldTracker }
-    , cmd
-    )
-
-
 type alias ViewOptions a msg =
     { id : String
     , label : String
+    , field : a
+    , tracker : InteractionTracker.State
     , toInput : InputOptions a msg -> H.Html msg
-    , onChange : Msg msg -> msg
+    , onChange : InteractionTracker.Msg msg -> msg
     }
 
 
@@ -64,8 +28,8 @@ type alias InputOptions a msg =
     }
 
 
-view : ViewOptions a msg -> InteractiveInput a -> H.Html msg
-view { id, label, toInput, onChange } { field, fieldTracker } =
+view : ViewOptions a msg -> H.Html msg
+view { id, label, field, tracker, toInput, onChange } =
     H.div []
         [ H.label [ HA.for id ] [ H.text label ]
         , H.div []
@@ -80,7 +44,7 @@ view { id, label, toInput, onChange } { field, fieldTracker } =
                 , input = input
                 , blur = blur
                 }
-            , H.span [] [ H.text (statusToString <| InteractionTracker.toStatus fieldTracker) ]
+            , H.span [] [ H.text (statusToString <| InteractionTracker.toStatus tracker) ]
             ]
         ]
 

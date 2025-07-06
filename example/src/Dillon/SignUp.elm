@@ -10,7 +10,8 @@ import Html as H
 import Html.Attributes as HA
 import Html.Events as HE
 import Lib.Input as Input
-import Lib.InteractiveInput as InteractiveInput exposing (InteractiveInput)
+import Lib.InteractionTracker as InteractionTracker
+import Lib.InteractiveInput as InteractiveInput
 
 
 main : Program () Model Msg
@@ -28,15 +29,19 @@ main =
 
 
 type alias Model =
-    { username : InteractiveInput String
-    , usernameField : InteractiveInput (Field String)
+    { username : String
+    , usernameTracker : InteractionTracker.State
+    , usernameField : Field String
+    , usernameFieldTracker : InteractionTracker.State
     }
 
 
 init : () -> ( Model, Cmd msg )
 init _ =
-    ( { username = InteractiveInput.init "dillon"
-      , usernameField = InteractiveInput.init <| F.fromString F.nonBlankString "dillon"
+    ( { username = "dillon"
+      , usernameTracker = InteractionTracker.init
+      , usernameField = F.fromString F.nonBlankString "dillon"
+      , usernameFieldTracker = InteractionTracker.init
       }
     , Cmd.none
     )
@@ -48,39 +53,39 @@ init _ =
 
 type Msg
     = InputUsername String
-    | ChangedUsername (InteractiveInput.Msg Msg)
+    | ChangedUsernameTracker (InteractionTracker.Msg Msg)
     | InputUsernameField String
-    | ChangedUsernameField (InteractiveInput.Msg Msg)
+    | ChangedUsernameFieldTracker (InteractionTracker.Msg Msg)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputUsername s ->
-            ( { model | username = InteractiveInput.modify (always s) model.username }
+            ( { model | username = s }
             , Cmd.none
             )
 
-        ChangedUsername subMsg ->
+        ChangedUsernameTracker subMsg ->
             let
-                ( username, cmd ) =
-                    InteractiveInput.update subMsg model.username
+                ( usernameTracker, cmd ) =
+                    InteractionTracker.update subMsg model.usernameTracker
             in
-            ( { model | username = username }
+            ( { model | usernameTracker = usernameTracker }
             , cmd
             )
 
         InputUsernameField s ->
-            ( { model | usernameField = InteractiveInput.modify (F.setFromString s) model.usernameField }
+            ( { model | usernameField = F.setFromString s model.usernameField }
             , Cmd.none
             )
 
-        ChangedUsernameField subMsg ->
+        ChangedUsernameFieldTracker subMsg ->
             let
-                ( usernameField, cmd ) =
-                    InteractiveInput.update subMsg model.usernameField
+                ( usernameFieldTracker, cmd ) =
+                    InteractionTracker.update subMsg model.usernameFieldTracker
             in
-            ( { model | usernameField = usernameField }
+            ( { model | usernameFieldTracker = usernameFieldTracker }
             , cmd
             )
 
@@ -90,20 +95,23 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { username, usernameField } =
+view { username, usernameTracker, usernameField, usernameFieldTracker } =
     H.div []
         [ H.h2 [] [ H.text "Sign Up" ]
         , H.form []
             [ InteractiveInput.view
                 { id = "username"
                 , label = "Username"
+                , field = username
+                , tracker = usernameTracker
                 , toInput = toRegularInput InputUsername
-                , onChange = ChangedUsername
+                , onChange = ChangedUsernameTracker
                 }
-                username
             , InteractiveInput.view
                 { id = "usernameField"
                 , label = "Username Field"
+                , field = usernameField
+                , tracker = usernameFieldTracker
                 , toInput =
                     toFieldInput
                         { isRequired = True
@@ -111,9 +119,8 @@ view { username, usernameField } =
                         , onInput = InputUsernameField
                         , attrs = []
                         }
-                , onChange = ChangedUsernameField
+                , onChange = ChangedUsernameFieldTracker
                 }
-                usernameField
             ]
         ]
 
