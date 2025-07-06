@@ -67,6 +67,7 @@ module Field.Advanced exposing
     , toRawString
     , toResult
     , toString
+    , toType
     , toValidation
     , trim
     , true
@@ -594,6 +595,11 @@ toString (Field tipe { processed }) =
     processed
         |> V.map tipe.toString
         |> V.withDefault ""
+
+
+toType : Field e a -> Type e a
+toType (Field tipe _) =
+    tipe
 
 
 

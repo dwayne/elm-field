@@ -66,6 +66,7 @@ module Field exposing
     , toRawString
     , toResult
     , toString
+    , toType
     , toValidation
     , trim
     , true
@@ -355,6 +356,11 @@ toValidation =
 toString : F.Field e a -> String
 toString =
     F.toString
+
+
+toType : F.Field e a -> F.Type e a
+toType =
+    F.toType
 
 
 

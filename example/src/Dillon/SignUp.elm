@@ -1,160 +1,134 @@
-module Dillon.SignUp exposing (main)
-
---
--- Based on https://ellie-app.com/myVVqSVC2QZa1.
---
-
-import Browser as B
-import Field as F exposing (Field)
-import Html as H
-import Html.Attributes as HA
-import Html.Events as HE
-import Lib.Input as Input
-import Lib.InteractionTracker as InteractionTracker
-import Lib.InteractiveInput as InteractiveInput
-
-
-main : Program () Model Msg
-main =
-    B.element
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = always Sub.none
-        }
-
-
-
--- MODEL
-
-
-type alias Model =
-    { username : String
-    , usernameTracker : InteractionTracker.State
-    , usernameField : Field String
-    , usernameFieldTracker : InteractionTracker.State
-    }
-
-
-init : () -> ( Model, Cmd msg )
-init _ =
-    ( { username = "dillon"
-      , usernameTracker = InteractionTracker.init
-      , usernameField = F.fromString F.nonBlankString "dillon"
-      , usernameFieldTracker = InteractionTracker.init
-      }
-    , Cmd.none
+module Dillon.SignUp exposing
+    ( Error
+    , Fields
+    , Output
+    , Setters
+    , SignUp
+    , form
     )
 
-
-
--- UPDATE
-
-
-type Msg
-    = InputUsername String
-    | ChangedUsernameTracker (InteractionTracker.Msg Msg)
-    | InputUsernameField String
-    | ChangedUsernameFieldTracker (InteractionTracker.Msg Msg)
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        InputUsername s ->
-            ( { model | username = s }
-            , Cmd.none
-            )
-
-        ChangedUsernameTracker subMsg ->
-            let
-                ( usernameTracker, cmd ) =
-                    InteractionTracker.update subMsg model.usernameTracker
-            in
-            ( { model | usernameTracker = usernameTracker }
-            , cmd
-            )
-
-        InputUsernameField s ->
-            ( { model | usernameField = F.setFromString s model.usernameField }
-            , Cmd.none
-            )
-
-        ChangedUsernameFieldTracker subMsg ->
-            let
-                ( usernameFieldTracker, cmd ) =
-                    InteractionTracker.update subMsg model.usernameFieldTracker
-            in
-            ( { model | usernameFieldTracker = usernameFieldTracker }
-            , cmd
-            )
+import Dillon.Role as Role exposing (Role)
+import Example1.Data.Password as Password exposing (Password)
+import Example1.Data.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
+import Example1.Data.Username as Username exposing (Username)
+import Field as F exposing (Field)
+import Lib.Form as Form exposing (Form)
+import Validation exposing (Validation)
 
 
 
--- VIEW
+-- FORM
 
 
-view : Model -> H.Html Msg
-view { username, usernameTracker, usernameField, usernameFieldTracker } =
-    H.div []
-        [ H.h2 [] [ H.text "Sign Up" ]
-        , H.form []
-            [ InteractiveInput.view
-                { id = "username"
-                , label = "Username"
-                , field = username
-                , tracker = usernameTracker
-                , toInput = toRegularInput InputUsername
-                , onChange = ChangedUsernameTracker
-                }
-            , InteractiveInput.view
-                { id = "usernameField"
-                , label = "Username Field"
-                , field = usernameField
-                , tracker = usernameFieldTracker
-                , toInput =
-                    toFieldInput
-                        { isRequired = True
-                        , isDisabled = False
-                        , onInput = InputUsernameField
-                        , attrs = []
-                        }
-                , onChange = ChangedUsernameFieldTracker
-                }
-            ]
-        ]
+type alias SignUp =
+    Form Fields Setters Error Output
 
 
-toRegularInput : (String -> msg) -> InteractiveInput.InputOptions String msg -> H.Html msg
-toRegularInput onInput { id, field, focus, input, blur } =
-    H.input
-        [ HA.id id
-        , HA.value field
-        , HE.onFocus focus
-        , HE.onInput (input onInput)
-        , HE.onBlur blur
-        ]
-        []
-
-
-toFieldInput :
-    { isRequired : Bool
-    , isDisabled : Bool
-    , onInput : String -> msg
-    , attrs : List (H.Attribute msg)
+type alias Fields =
+    { username : Field Username
+    , password : Field Password
+    , passwordConfirmation : Field PasswordConfirmation
+    , role : Field Role
     }
-    -> InteractiveInput.InputOptions (Field a) msg
-    -> H.Html msg
-toFieldInput { isRequired, isDisabled, onInput, attrs } { id, field, focus, input, blur } =
-    Input.view
-        { field = field
-        , isRequired = isRequired
-        , isDisabled = isDisabled
-        , onInput = input onInput
-        , attrs =
-            attrs
-                ++ [ HA.id id
-                   , HE.onFocus focus
-                   , HE.onBlur blur
-                   ]
+
+
+type alias Setters =
+    { setUsername : String -> Fields -> Fields
+    , setPassword : String -> Fields -> Fields
+    , setPasswordConfirmation : String -> Fields -> Fields
+    , setRole : Role -> Fields -> Fields
+    }
+
+
+type Error
+    = UsernameError F.Error
+    | PasswordError F.Error
+    | PasswordConfirmationError F.Error
+    | RoleError F.Error
+
+
+type alias Output =
+    { username : Username
+    , password : Password
+    , role : Role
+    }
+
+
+form : SignUp
+form =
+    Form.new
+        { init = init
+        , setters = setters
+        , validate = validate
         }
+
+
+
+-- INIT
+
+
+init : Fields
+init =
+    { username = F.fromString Username.fieldType "dillon"
+    , password = F.empty Password.fieldType
+    , passwordConfirmation = F.empty PasswordConfirmation.fieldType
+    , role = F.fromValue Role.fieldType Role.SuperAdmin
+    }
+
+
+
+-- SETTERS
+
+
+setters : Setters
+setters =
+    { setUsername =
+        \s fields ->
+            { fields | username = F.setFromString s fields.username }
+    , setPassword =
+        \s fields ->
+            let
+                password =
+                    F.setFromString s fields.password
+            in
+            { fields | password = password, passwordConfirmation = updatePasswordConfirmation password fields.passwordConfirmation }
+    , setPasswordConfirmation =
+        \s fields ->
+            let
+                passwordConfirmation =
+                    F.setFromString s fields.passwordConfirmation
+            in
+            { fields | passwordConfirmation = updatePasswordConfirmation fields.password passwordConfirmation }
+    , setRole =
+        \role fields ->
+            { fields | role = F.setFromValue role fields.role }
+    }
+
+
+updatePasswordConfirmation : Field Password -> Field PasswordConfirmation -> Field PasswordConfirmation
+updatePasswordConfirmation passwordField passwordConfirmationField =
+    (\password passwordConfirmation ->
+        if Password.toString password == PasswordConfirmation.toString passwordConfirmation then
+            passwordConfirmationField
+
+        else
+            F.setError "The password confirmation does not match." passwordConfirmationField
+    )
+        |> F.get passwordField
+        |> F.and passwordConfirmationField
+        |> F.withDefault passwordConfirmationField
+
+
+
+-- VALIDATE
+
+
+validate : Fields -> Validation Error Output
+validate fields =
+    (\username password _ role ->
+        Output username password role
+    )
+        |> F.get (fields.username |> F.mapError UsernameError)
+        |> F.and (fields.password |> F.mapError PasswordError)
+        |> F.and (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
+        |> F.and (fields.role |> F.mapError RoleError)

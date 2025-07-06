@@ -1,21 +1,34 @@
-module Lib.Form exposing (Config, Form, new, set, submit, toFields)
+module Lib.Form exposing
+    ( Config
+    , Form
+    , isInvalid
+    , isValid
+    , new
+    , toFields
+    , update
+    , validate
+    , validateAsMaybe
+    , validateAsResult
+    )
+
+import Validation as V exposing (Validation)
 
 
-type Form name fields error output
+type Form fields setters error output
     = Form
-        { config : Config name fields error output
+        { config : Config fields setters error output
         , fields : fields
         }
 
 
-type alias Config name fields error output =
+type alias Config fields setters error output =
     { init : fields
-    , set : name -> String -> fields -> fields
-    , submit : fields -> Result (List error) output
+    , setters : setters
+    , validate : fields -> Validation error output
     }
 
 
-new : Config name fields error output -> Form name fields error output
+new : Config fields setters error output -> Form fields setters error output
 new config =
     Form
         { config = config
@@ -23,19 +36,36 @@ new config =
         }
 
 
-set : name -> String -> Form name fields error output -> Form name fields error output
-set name s (Form { config, fields }) =
-    Form
-        { config = config
-        , fields = config.set name s fields
-        }
+update : (setters -> a -> fields -> fields) -> a -> Form fields setters error output -> Form fields setters error output
+update f x (Form form) =
+    Form { form | fields = f form.config.setters x form.fields }
 
 
-submit : Form name fields error output -> Result (List error) output
-submit (Form { config, fields }) =
-    config.submit fields
+isValid : Form fields setters error output -> Bool
+isValid =
+    validate >> V.isValid
 
 
-toFields : Form name fields error output -> fields
+isInvalid : Form fields setters error output -> Bool
+isInvalid =
+    not << isValid
+
+
+validate : Form fields setters error output -> Validation error output
+validate (Form { config, fields }) =
+    config.validate fields
+
+
+validateAsResult : Form fields setters error output -> Result (List error) output
+validateAsResult =
+    validate >> V.toResult
+
+
+validateAsMaybe : Form fields setters error output -> Maybe output
+validateAsMaybe =
+    validate >> V.toMaybe
+
+
+toFields : Form fields setters error output -> fields
 toFields (Form { fields }) =
     fields
