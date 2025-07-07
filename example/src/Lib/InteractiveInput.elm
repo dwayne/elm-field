@@ -4,6 +4,7 @@ module Lib.InteractiveInput exposing
     , view
     )
 
+import Field as F exposing (Error, Field)
 import Html as H
 import Html.Attributes as HA
 import Lib.InteractionTracker as InteractionTracker
@@ -12,8 +13,9 @@ import Lib.InteractionTracker as InteractionTracker
 type alias ViewOptions a msg =
     { id : String
     , label : String
-    , field : a
+    , field : Field a
     , tracker : InteractionTracker.State
+    , errorToString : Error -> String
     , toInput : InputOptions a msg -> H.Html msg
     , onChange : InteractionTracker.Msg msg -> msg
     }
@@ -21,7 +23,7 @@ type alias ViewOptions a msg =
 
 type alias InputOptions a msg =
     { id : String
-    , field : a
+    , field : Field a
     , focus : msg
     , input : (String -> msg) -> String -> msg
     , blur : msg
@@ -29,23 +31,37 @@ type alias InputOptions a msg =
 
 
 view : ViewOptions a msg -> H.Html msg
-view { id, label, field, tracker, toInput, onChange } =
-    H.div []
-        [ H.label [ HA.for id ] [ H.text label ]
-        , H.div []
-            [ let
-                { focus, input, blur } =
-                    InteractionTracker.toMessages onChange
-              in
-              toInput
-                { id = id
-                , field = field
-                , focus = focus
-                , input = input
-                , blur = blur
-                }
-            , H.span [] [ H.text (statusToString <| InteractionTracker.toStatus tracker) ]
-            ]
+view { id, label, field, tracker, errorToString, toInput, onChange } =
+    let
+        status =
+            InteractionTracker.toStatus tracker
+
+        { focus, input, blur } =
+            InteractionTracker.toMessages onChange
+    in
+    H.p []
+        [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
+        , H.text " "
+        , toInput
+            { id = id
+            , field = field
+            , focus = focus
+            , input = input
+            , blur = blur
+            }
+        , H.text " "
+        , H.span [] [ H.text <| statusToString status ]
+        , if status == InteractionTracker.Blurred then
+            field
+                |> F.allErrors
+                |> List.map
+                    (\e ->
+                        H.li [ HA.style "color" "red" ] [ H.text <| errorToString e ]
+                    )
+                |> H.ul []
+
+          else
+            H.text ""
         ]
 
 

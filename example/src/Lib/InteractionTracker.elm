@@ -42,12 +42,20 @@ update : Msg msg -> State -> ( State, Cmd msg )
 update msg (State state) =
     case msg of
         Focus ->
-            ( State { state | status = Focused }
-            , Cmd.none
-            )
+            if state.status == Blurred then
+                ( State state, Cmd.none )
+
+            else
+                ( State { state | status = Focused }
+                , Cmd.none
+                )
 
         Input onInput s ->
-            ( State { state | status = Changed }
+            ( if state.status == Blurred then
+                State state
+
+              else
+                State { state | status = Changed }
             , Task.dispatch (onInput s)
             )
 
