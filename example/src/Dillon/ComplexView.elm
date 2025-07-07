@@ -39,6 +39,7 @@ main =
 type alias Model =
     { signUp : SignUp
     , usernameTracker : InteractionTracker.State
+    , passwordTracker : InteractionTracker.State
     , maybeOutput : Maybe SignUp.Output
     }
 
@@ -47,6 +48,7 @@ init : () -> ( Model, Cmd msg )
 init _ =
     ( { signUp = SignUp.form
       , usernameTracker = InteractionTracker.init
+      , passwordTracker = InteractionTracker.init
       , maybeOutput = Nothing
       }
     , Cmd.none
@@ -61,6 +63,7 @@ type Msg
     = InputUsername String
     | ChangedUsernameTracker (InteractionTracker.Msg Msg)
     | InputPassword String
+    | ChangedPasswordTracker (InteractionTracker.Msg Msg)
     | InputPasswordConfirmation String
     | InputRole Role
     | Submit
@@ -88,6 +91,15 @@ update msg model =
             , Cmd.none
             )
 
+        ChangedPasswordTracker subMsg ->
+            let
+                ( passwordTracker, cmd ) =
+                    InteractionTracker.update subMsg model.passwordTracker
+            in
+            ( { model | passwordTracker = passwordTracker }
+            , cmd
+            )
+
         InputPasswordConfirmation s ->
             ( { model | signUp = Form.update .setPasswordConfirmation s model.signUp }
             , Cmd.none
@@ -109,7 +121,7 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { signUp, usernameTracker, maybeOutput } =
+view { signUp, usernameTracker, passwordTracker, maybeOutput } =
     let
         fields =
             Form.toFields signUp
@@ -132,15 +144,17 @@ view { signUp, usernameTracker, maybeOutput } =
                 , onInput = InputUsername
                 , onChange = ChangedUsernameTracker
                 }
-            , viewInput
+            , viewInteractiveInput
                 { id = "password"
                 , label = "Password"
                 , type_ = "password"
                 , field = fields.password
+                , tracker = passwordTracker
                 , errorToString = Password.errorToString
                 , isRequired = True
                 , isDisabled = False
                 , onInput = InputPassword
+                , onChange = ChangedPasswordTracker
                 }
             , viewInput
                 { id = "passwordConfirmation"
