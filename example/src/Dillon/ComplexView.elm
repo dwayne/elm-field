@@ -5,13 +5,19 @@ module Dillon.ComplexView exposing (main)
 --
 
 import Browser as B
-import Field as F exposing (Field)
+import Dillon.Role as Role exposing (Role)
+import Dillon.SignUp as SignUp exposing (SignUp)
+import Example1.Data.Password as Password exposing (Password)
+import Example1.Data.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
+import Example1.Data.Username as Username exposing (Username)
+import Field as F exposing (Error, Field)
 import Html as H
 import Html.Attributes as HA
 import Html.Events as HE
+import Lib.Form as Form
 import Lib.Input as Input
-import Lib.InteractionTracker as InteractionTracker
-import Lib.InteractiveInput as InteractiveInput
+import Lib.Select as Select
+import Lib.Selection.NonEmpty as Selection exposing (Selection)
 
 
 main : Program () Model Msg
@@ -29,19 +35,15 @@ main =
 
 
 type alias Model =
-    { username : String
-    , usernameTracker : InteractionTracker.State
-    , usernameField : Field String
-    , usernameFieldTracker : InteractionTracker.State
+    { signUp : SignUp
+    , maybeOutput : Maybe SignUp.Output
     }
 
 
 init : () -> ( Model, Cmd msg )
 init _ =
-    ( { username = "dillon"
-      , usernameTracker = InteractionTracker.init
-      , usernameField = F.fromString F.nonBlankString "dillon"
-      , usernameFieldTracker = InteractionTracker.init
+    ( { signUp = SignUp.form
+      , maybeOutput = Nothing
       }
     , Cmd.none
     )
@@ -53,40 +55,38 @@ init _ =
 
 type Msg
     = InputUsername String
-    | ChangedUsernameTracker (InteractionTracker.Msg Msg)
-    | InputUsernameField String
-    | ChangedUsernameFieldTracker (InteractionTracker.Msg Msg)
+    | InputPassword String
+    | InputPasswordConfirmation String
+    | InputRole Role
+    | Submit
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
         InputUsername s ->
-            ( { model | username = s }
+            ( { model | signUp = Form.update .setUsername s model.signUp }
             , Cmd.none
             )
 
-        ChangedUsernameTracker subMsg ->
-            let
-                ( usernameTracker, cmd ) =
-                    InteractionTracker.update subMsg model.usernameTracker
-            in
-            ( { model | usernameTracker = usernameTracker }
-            , cmd
-            )
-
-        InputUsernameField s ->
-            ( { model | usernameField = F.setFromString s model.usernameField }
+        InputPassword s ->
+            ( { model | signUp = Form.update .setPassword s model.signUp }
             , Cmd.none
             )
 
-        ChangedUsernameFieldTracker subMsg ->
-            let
-                ( usernameFieldTracker, cmd ) =
-                    InteractionTracker.update subMsg model.usernameFieldTracker
-            in
-            ( { model | usernameFieldTracker = usernameFieldTracker }
-            , cmd
+        InputPasswordConfirmation s ->
+            ( { model | signUp = Form.update .setPasswordConfirmation s model.signUp }
+            , Cmd.none
+            )
+
+        InputRole role ->
+            ( { model | signUp = Form.update .setRole role model.signUp }
+            , Cmd.none
+            )
+
+        Submit ->
+            ( { model | maybeOutput = Form.validateAsMaybe model.signUp }
+            , Cmd.none
             )
 
 
@@ -95,66 +95,163 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { username, usernameTracker, usernameField, usernameFieldTracker } =
+view { signUp, maybeOutput } =
+    let
+        fields =
+            Form.toFields signUp
+    in
     H.div []
         [ H.h2 [] [ H.text "Sign Up" ]
-        , H.form []
-            [ InteractiveInput.view
+        , H.form
+            [ HA.novalidate True
+            , HE.onSubmit Submit
+            ]
+            [ viewInput
                 { id = "username"
                 , label = "Username"
-                , field = username
-                , tracker = usernameTracker
-                , toInput = toRegularInput InputUsername
-                , onChange = ChangedUsernameTracker
+                , type_ = "text"
+                , field = fields.username
+                , errorToString = Username.errorToString
+                , isRequired = True
+                , isDisabled = False
+                , onInput = InputUsername
                 }
-            , InteractiveInput.view
-                { id = "usernameField"
-                , label = "Username Field"
-                , field = usernameField
-                , tracker = usernameFieldTracker
-                , toInput =
-                    toFieldInput
-                        { isRequired = True
-                        , isDisabled = False
-                        , onInput = InputUsernameField
-                        , attrs = []
-                        }
-                , onChange = ChangedUsernameFieldTracker
+            , viewInput
+                { id = "password"
+                , label = "Password"
+                , type_ = "password"
+                , field = fields.password
+                , errorToString = Password.errorToString
+                , isRequired = True
+                , isDisabled = False
+                , onInput = InputPassword
                 }
+            , viewInput
+                { id = "passwordConfirmation"
+                , label = "Password Confirmation"
+                , type_ = "password"
+                , field = fields.passwordConfirmation
+                , errorToString = PasswordConfirmation.errorToString
+                , isRequired = True
+                , isDisabled = False
+                , onInput = InputPasswordConfirmation
+                }
+            , viewSelect
+                { id = "role"
+                , label = "Role"
+                , field = fields.role
+                , options =
+                    case F.toMaybe fields.role of
+                        Just role ->
+                            Selection.select role defaultRoleOptions
+
+                        Nothing ->
+                            defaultRoleOptions
+                , toOption = roleToString
+                , errorToString = Role.errorToString
+                , isRequired = True
+                , isDisabled = False
+                , onInput = InputRole
+                }
+            , H.p []
+                [ H.button
+                    [ HA.disabled <| Form.isInvalid signUp ]
+                    [ H.text "Sign Up" ]
+                ]
             ]
+        , case maybeOutput of
+            Just { username, password, role } ->
+                H.div []
+                    [ H.h2 [] [ H.text "Output" ]
+                    , H.p [] [ H.text <| "Username: " ++ Username.toString username ]
+                    , H.p [] [ H.text <| "Password: " ++ Password.toString password ]
+                    , H.p [] [ H.text <| "Role: " ++ roleToString role ]
+                    ]
+
+            Nothing ->
+                H.text ""
         ]
 
 
-toRegularInput : (String -> msg) -> InteractiveInput.InputOptions String msg -> H.Html msg
-toRegularInput onInput { id, field, focus, input, blur } =
-    H.input
-        [ HA.id id
-        , HA.value field
-        , HE.onFocus focus
-        , HE.onInput (input onInput)
-        , HE.onBlur blur
-        ]
-        []
+defaultRoleOptions : Selection Role
+defaultRoleOptions =
+    Selection.fromList [] Role.Admin [ Role.SuperAdmin, Role.Regular ]
 
 
-toFieldInput :
-    { isRequired : Bool
+roleToString : Role -> String
+roleToString role =
+    case role of
+        Role.Regular ->
+            "Regular"
+
+        Role.Admin ->
+            "Admin"
+
+        Role.SuperAdmin ->
+            "Super Admin"
+
+
+viewInput :
+    { id : String
+    , label : String
+    , type_ : String
+    , field : Field a
+    , errorToString : Error -> String
+    , isRequired : Bool
     , isDisabled : Bool
     , onInput : String -> msg
-    , attrs : List (H.Attribute msg)
     }
-    -> InteractiveInput.InputOptions (Field a) msg
     -> H.Html msg
-toFieldInput { isRequired, isDisabled, onInput, attrs } { id, field, focus, input, blur } =
-    Input.view
-        { field = field
-        , isRequired = isRequired
-        , isDisabled = isDisabled
-        , onInput = input onInput
-        , attrs =
-            attrs
-                ++ [ HA.id id
-                   , HE.onFocus focus
-                   , HE.onBlur blur
-                   ]
-        }
+viewInput { id, label, type_, field, errorToString, isRequired, isDisabled, onInput } =
+    H.p []
+        [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
+        , H.text " "
+        , Input.view
+            { field = field
+            , isRequired = isRequired
+            , isDisabled = isDisabled
+            , onInput = onInput
+            , attrs = [ HA.id id, HA.type_ type_ ]
+            }
+        , if F.isDirty field then
+            field
+                |> F.allErrors
+                |> List.map
+                    (\e ->
+                        H.li [ HA.style "color" "red" ] [ H.text <| errorToString e ]
+                    )
+                |> H.ul []
+
+          else
+            H.text ""
+        ]
+
+
+viewSelect :
+    { id : String
+    , label : String
+    , field : Field a
+    , options : Selection a
+    , toOption : a -> String
+    , errorToString : Error -> String
+    , isRequired : Bool
+    , isDisabled : Bool
+    , onInput : a -> msg
+    }
+    -> H.Html msg
+viewSelect { id, label, field, options, toOption, errorToString, isRequired, isDisabled, onInput } =
+    H.p []
+        [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
+        , H.text " "
+        , Select.view
+            { field = field
+            , options = options
+            , toOption = toOption
+            , errorToString = errorToString
+            , isRequired = isRequired
+            , isDisabled = isDisabled
+            , onInput = onInput
+            , attrs = [ HA.id id ]
+            , optionAttrs = always []
+            }
+        ]
