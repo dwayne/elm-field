@@ -40,6 +40,7 @@ type alias Model =
     { signUp : SignUp
     , usernameTracker : InteractionTracker.State
     , passwordTracker : InteractionTracker.State
+    , passwordConfirmationTracker : InteractionTracker.State
     , maybeOutput : Maybe SignUp.Output
     }
 
@@ -49,6 +50,7 @@ init _ =
     ( { signUp = SignUp.form
       , usernameTracker = InteractionTracker.init
       , passwordTracker = InteractionTracker.init
+      , passwordConfirmationTracker = InteractionTracker.init
       , maybeOutput = Nothing
       }
     , Cmd.none
@@ -65,6 +67,7 @@ type Msg
     | InputPassword String
     | ChangedPasswordTracker (InteractionTracker.Msg Msg)
     | InputPasswordConfirmation String
+    | ChangedPasswordConfirmationTracker (InteractionTracker.Msg Msg)
     | InputRole Role
     | Submit
 
@@ -105,6 +108,15 @@ update msg model =
             , Cmd.none
             )
 
+        ChangedPasswordConfirmationTracker subMsg ->
+            let
+                ( passwordConfirmationTracker, cmd ) =
+                    InteractionTracker.update subMsg model.passwordConfirmationTracker
+            in
+            ( { model | passwordConfirmationTracker = passwordConfirmationTracker }
+            , cmd
+            )
+
         InputRole role ->
             ( { model | signUp = Form.update .setRole role model.signUp }
             , Cmd.none
@@ -121,7 +133,7 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { signUp, usernameTracker, passwordTracker, maybeOutput } =
+view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, maybeOutput } =
     let
         fields =
             Form.toFields signUp
@@ -156,15 +168,17 @@ view { signUp, usernameTracker, passwordTracker, maybeOutput } =
                 , onInput = InputPassword
                 , onChange = ChangedPasswordTracker
                 }
-            , viewInput
+            , viewInteractiveInput
                 { id = "passwordConfirmation"
                 , label = "Password Confirmation"
                 , type_ = "password"
                 , field = fields.passwordConfirmation
+                , tracker = passwordConfirmationTracker
                 , errorToString = PasswordConfirmation.errorToString
                 , isRequired = True
                 , isDisabled = False
                 , onInput = InputPasswordConfirmation
+                , onChange = ChangedPasswordConfirmationTracker
                 }
             , viewSelect
                 { id = "role"
@@ -246,7 +260,7 @@ viewInteractiveInput { id, label, type_, field, tracker, errorToString, isRequir
                 { isRequired = isRequired
                 , isDisabled = isDisabled
                 , onInput = onInput
-                , attrs = []
+                , attrs = [ HA.type_ type_ ]
                 }
         , onChange = onChange
         }
@@ -273,42 +287,6 @@ toFieldInput { isRequired, isDisabled, onInput, attrs } { id, field, focus, inpu
                    , HE.onBlur blur
                    ]
         }
-
-
-viewInput :
-    { id : String
-    , label : String
-    , type_ : String
-    , field : Field a
-    , errorToString : Error -> String
-    , isRequired : Bool
-    , isDisabled : Bool
-    , onInput : String -> msg
-    }
-    -> H.Html msg
-viewInput { id, label, type_, field, errorToString, isRequired, isDisabled, onInput } =
-    H.p []
-        [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
-        , H.text " "
-        , Input.view
-            { field = field
-            , isRequired = isRequired
-            , isDisabled = isDisabled
-            , onInput = onInput
-            , attrs = [ HA.id id, HA.type_ type_ ]
-            }
-        , if F.isDirty field then
-            field
-                |> F.allErrors
-                |> List.map
-                    (\e ->
-                        H.li [ HA.style "color" "red" ] [ H.text <| errorToString e ]
-                    )
-                |> H.ul []
-
-          else
-            H.text ""
-        ]
 
 
 viewSelect :
