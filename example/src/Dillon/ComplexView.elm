@@ -16,6 +16,8 @@ import Html.Attributes as HA
 import Html.Events as HE
 import Lib.Form as Form
 import Lib.Input as Input
+import Lib.InteractionTracker as InteractionTracker
+import Lib.InteractiveInput as InteractiveInput
 import Lib.Select as Select
 import Lib.Selection.NonEmpty as Selection exposing (Selection)
 
@@ -36,6 +38,7 @@ main =
 
 type alias Model =
     { signUp : SignUp
+    , usernameTracker : InteractionTracker.State
     , maybeOutput : Maybe SignUp.Output
     }
 
@@ -43,6 +46,7 @@ type alias Model =
 init : () -> ( Model, Cmd msg )
 init _ =
     ( { signUp = SignUp.form
+      , usernameTracker = InteractionTracker.init
       , maybeOutput = Nothing
       }
     , Cmd.none
@@ -55,18 +59,28 @@ init _ =
 
 type Msg
     = InputUsername String
+    | ChangedUsernameTracker (InteractionTracker.Msg Msg)
     | InputPassword String
     | InputPasswordConfirmation String
     | InputRole Role
     | Submit
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputUsername s ->
             ( { model | signUp = Form.update .setUsername s model.signUp }
             , Cmd.none
+            )
+
+        ChangedUsernameTracker subMsg ->
+            let
+                ( usernameTracker, cmd ) =
+                    InteractionTracker.update subMsg model.usernameTracker
+            in
+            ( { model | usernameTracker = usernameTracker }
+            , cmd
             )
 
         InputPassword s ->
@@ -95,7 +109,7 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { signUp, maybeOutput } =
+view { signUp, usernameTracker, maybeOutput } =
     let
         fields =
             Form.toFields signUp
@@ -106,15 +120,17 @@ view { signUp, maybeOutput } =
             [ HA.novalidate True
             , HE.onSubmit Submit
             ]
-            [ viewInput
+            [ viewInteractiveInput
                 { id = "username"
                 , label = "Username"
                 , type_ = "text"
                 , field = fields.username
+                , tracker = usernameTracker
                 , errorToString = Username.errorToString
                 , isRequired = True
                 , isDisabled = False
                 , onInput = InputUsername
+                , onChange = ChangedUsernameTracker
                 }
             , viewInput
                 { id = "password"
@@ -189,6 +205,60 @@ roleToString role =
 
         Role.SuperAdmin ->
             "Super Admin"
+
+
+viewInteractiveInput :
+    { id : String
+    , label : String
+    , type_ : String
+    , field : Field a
+    , tracker : InteractionTracker.State
+    , errorToString : Error -> String
+    , isRequired : Bool
+    , isDisabled : Bool
+    , onInput : String -> msg
+    , onChange : InteractionTracker.Msg msg -> msg
+    }
+    -> H.Html msg
+viewInteractiveInput { id, label, type_, field, tracker, errorToString, isRequired, isDisabled, onInput, onChange } =
+    InteractiveInput.view
+        { id = id
+        , label = label
+        , field = field
+        , tracker = tracker
+        , errorToString = errorToString
+        , toInput =
+            toFieldInput
+                { isRequired = isRequired
+                , isDisabled = isDisabled
+                , onInput = onInput
+                , attrs = []
+                }
+        , onChange = onChange
+        }
+
+
+toFieldInput :
+    { isRequired : Bool
+    , isDisabled : Bool
+    , onInput : String -> msg
+    , attrs : List (H.Attribute msg)
+    }
+    -> InteractiveInput.InputOptions a msg
+    -> H.Html msg
+toFieldInput { isRequired, isDisabled, onInput, attrs } { id, field, focus, input, blur } =
+    Input.view
+        { field = field
+        , isRequired = isRequired
+        , isDisabled = isDisabled
+        , onInput = input onInput
+        , attrs =
+            attrs
+                ++ [ HA.id id
+                   , HE.onFocus focus
+                   , HE.onBlur blur
+                   ]
+        }
 
 
 viewInput :
