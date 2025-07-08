@@ -97,6 +97,7 @@ view { signUp, maybeOutput } =
                 , errorToString = Username.errorToString
                 , isRequired = True
                 , isDisabled = False
+                , attrs = [ HA.autofocus True ]
                 , onInput = InputUsername
                 }
             , viewInput
@@ -107,6 +108,7 @@ view { signUp, maybeOutput } =
                 , errorToString = Password.errorToString
                 , isRequired = True
                 , isDisabled = False
+                , attrs = []
                 , onInput = InputPassword
                 }
             , viewInput
@@ -117,6 +119,7 @@ view { signUp, maybeOutput } =
                 , errorToString = PasswordConfirmation.errorToString
                 , isRequired = True
                 , isDisabled = False
+                , attrs = []
                 , onInput = InputPasswordConfirmation
                 }
             , viewSelect
@@ -182,10 +185,11 @@ viewInput :
     , errorToString : Error -> String
     , isRequired : Bool
     , isDisabled : Bool
+    , attrs : List (H.Attribute msg)
     , onInput : String -> msg
     }
     -> H.Html msg
-viewInput { id, label, type_, field, errorToString, isRequired, isDisabled, onInput } =
+viewInput { id, label, type_, field, errorToString, isRequired, isDisabled, attrs, onInput } =
     H.p []
         [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
         , H.text " "
@@ -194,7 +198,7 @@ viewInput { id, label, type_, field, errorToString, isRequired, isDisabled, onIn
             , isRequired = isRequired
             , isDisabled = isDisabled
             , onInput = onInput
-            , attrs = [ HA.id id, HA.type_ type_ ]
+            , attrs = attrs ++ [ HA.id id, HA.type_ type_ ]
             }
         , if F.isDirty field then
             field

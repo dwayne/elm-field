@@ -191,6 +191,7 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ti
                 , errorToString = Username.errorToString
                 , isRequired = True
                 , isDisabled = isSubmitting
+                , attrs = [ HA.autofocus True ]
                 , onInput = InputUsername
                 , onChange = ChangedUsernameTracker
                 }
@@ -203,6 +204,7 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ti
                 , errorToString = Password.errorToString
                 , isRequired = True
                 , isDisabled = isSubmitting
+                , attrs = []
                 , onInput = InputPassword
                 , onChange = ChangedPasswordTracker
                 }
@@ -215,6 +217,7 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ti
                 , errorToString = PasswordConfirmation.errorToString
                 , isRequired = True
                 , isDisabled = isSubmitting
+                , attrs = []
                 , onInput = InputPasswordConfirmation
                 , onChange = ChangedPasswordConfirmationTracker
                 }
@@ -288,11 +291,12 @@ viewInteractiveInput :
     , errorToString : Error -> String
     , isRequired : Bool
     , isDisabled : Bool
+    , attrs : List (H.Attribute msg)
     , onInput : String -> msg
     , onChange : InteractionTracker.Msg msg -> msg
     }
     -> H.Html msg
-viewInteractiveInput { id, label, type_, field, tracker, errorToString, isRequired, isDisabled, onInput, onChange } =
+viewInteractiveInput { id, label, type_, field, tracker, errorToString, isRequired, isDisabled, attrs, onInput, onChange } =
     InteractiveInput.view
         { id = id
         , label = label
@@ -304,7 +308,7 @@ viewInteractiveInput { id, label, type_, field, tracker, errorToString, isRequir
                 { isRequired = isRequired
                 , isDisabled = isDisabled
                 , onInput = onInput
-                , attrs = [ HA.type_ type_ ]
+                , attrs = attrs ++ [ HA.type_ type_ ]
                 }
         , onChange = onChange
         }
