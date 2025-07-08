@@ -261,10 +261,10 @@ false =
 boolToString : Bool -> String
 boolToString b =
     if b then
-        "True"
+        "t"
 
     else
-        "False"
+        ""
 
 
 char : Type (Error e) Char
