@@ -20,6 +20,7 @@ import Lib.InteractionTracker as InteractionTracker
 import Lib.InteractiveInput as InteractiveInput
 import Lib.Select as Select
 import Lib.Selection.NonEmpty as Selection exposing (Selection)
+import Lib.Timer as Timer exposing (Timer)
 
 
 main : Program () Model Msg
@@ -41,6 +42,8 @@ type alias Model =
     , usernameTracker : InteractionTracker.State
     , passwordTracker : InteractionTracker.State
     , passwordConfirmationTracker : InteractionTracker.State
+    , timer : Timer
+    , isSubmitting : Bool
     , maybeOutput : Maybe SignUp.Output
     }
 
@@ -51,10 +54,21 @@ init _ =
       , usernameTracker = InteractionTracker.init
       , passwordTracker = InteractionTracker.init
       , passwordConfirmationTracker = InteractionTracker.init
+      , timer = Timer.init
+      , isSubmitting = False
       , maybeOutput = Nothing
       }
     , Cmd.none
     )
+
+
+timerConfig : Timer.Config Msg
+timerConfig =
+    Timer.config
+        { wait = 5000
+        , onExpire = ExpiredTimer
+        , onChange = ChangedTimer
+        }
 
 
 
@@ -70,6 +84,8 @@ type Msg
     | ChangedPasswordConfirmationTracker (InteractionTracker.Msg Msg)
     | InputRole Role
     | Submit
+    | ExpiredTimer
+    | ChangedTimer Timer.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -123,8 +139,30 @@ update msg model =
             )
 
         Submit ->
-            ( { model | maybeOutput = Form.validateAsMaybe model.signUp }
+            let
+                ( timer, cmd ) =
+                    Timer.setTimeout timerConfig model.timer
+            in
+            ( { model | timer = timer, isSubmitting = True }
+            , cmd
+            )
+
+        ExpiredTimer ->
+            ( { model
+                | signUp = SignUp.form
+                , usernameTracker = InteractionTracker.init
+                , passwordTracker = InteractionTracker.init
+                , passwordConfirmationTracker = InteractionTracker.init
+                , timer = Timer.init
+                , isSubmitting = False
+                , maybeOutput = Form.validateAsMaybe model.signUp
+              }
             , Cmd.none
+            )
+
+        ChangedTimer subMsg ->
+            ( model
+            , Timer.update timerConfig subMsg model.timer
             )
 
 
@@ -133,7 +171,7 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, maybeOutput } =
+view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, timer, isSubmitting, maybeOutput } =
     let
         fields =
             Form.toFields signUp
@@ -152,7 +190,7 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ma
                 , tracker = usernameTracker
                 , errorToString = Username.errorToString
                 , isRequired = True
-                , isDisabled = False
+                , isDisabled = isSubmitting
                 , onInput = InputUsername
                 , onChange = ChangedUsernameTracker
                 }
@@ -164,7 +202,7 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ma
                 , tracker = passwordTracker
                 , errorToString = Password.errorToString
                 , isRequired = True
-                , isDisabled = False
+                , isDisabled = isSubmitting
                 , onInput = InputPassword
                 , onChange = ChangedPasswordTracker
                 }
@@ -176,7 +214,7 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ma
                 , tracker = passwordConfirmationTracker
                 , errorToString = PasswordConfirmation.errorToString
                 , isRequired = True
-                , isDisabled = False
+                , isDisabled = isSubmitting
                 , onInput = InputPasswordConfirmation
                 , onChange = ChangedPasswordConfirmationTracker
                 }
@@ -194,13 +232,19 @@ view { signUp, usernameTracker, passwordTracker, passwordConfirmationTracker, ma
                 , toOption = roleToString
                 , errorToString = Role.errorToString
                 , isRequired = True
-                , isDisabled = False
+                , isDisabled = isSubmitting
                 , onInput = InputRole
                 }
             , H.p []
                 [ H.button
-                    [ HA.disabled <| Form.isInvalid signUp ]
-                    [ H.text "Sign Up" ]
+                    [ HA.disabled (Form.isInvalid signUp || isSubmitting) ]
+                    [ H.text <|
+                        if isSubmitting then
+                            "Signing Up..."
+
+                        else
+                            "Sign Up"
+                    ]
                 ]
             ]
         , case maybeOutput of
