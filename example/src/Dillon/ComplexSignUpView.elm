@@ -303,6 +303,7 @@ viewInteractiveInput { id, label, type_, field, tracker, errorToString, isRequir
         , field = field
         , tracker = tracker
         , errorToString = errorToString
+        , debug = True
         , toInput =
             toFieldInput
                 { isRequired = isRequired

@@ -16,6 +16,7 @@ type alias ViewOptions a msg =
     , field : Field a
     , tracker : InteractionTracker.State
     , errorToString : Error -> String
+    , debug : Bool
     , toInput : InputOptions a msg -> H.Html msg
     , onChange : InteractionTracker.Msg msg -> msg
     }
@@ -31,7 +32,7 @@ type alias InputOptions a msg =
 
 
 view : ViewOptions a msg -> H.Html msg
-view { id, label, field, tracker, errorToString, toInput, onChange } =
+view { id, label, field, tracker, errorToString, debug, toInput, onChange } =
     let
         status =
             InteractionTracker.toStatus tracker
@@ -39,7 +40,7 @@ view { id, label, field, tracker, errorToString, toInput, onChange } =
         { focus, input, blur } =
             InteractionTracker.toMessages onChange
     in
-    H.p []
+    H.p [] <|
         [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
         , H.text " "
         , toInput
@@ -49,20 +50,27 @@ view { id, label, field, tracker, errorToString, toInput, onChange } =
             , input = input
             , blur = blur
             }
-        , H.text " "
-        , H.span [] [ H.text <| statusToString status ]
-        , if status == InteractionTracker.Blurred then
-            field
-                |> F.allErrors
-                |> List.map
-                    (\e ->
-                        H.li [ HA.style "color" "red" ] [ H.text <| errorToString e ]
-                    )
-                |> H.ul []
-
-          else
-            H.text ""
         ]
+            ++ (if debug then
+                    [ H.text " "
+                    , H.span [] [ H.text <| statusToString status ]
+                    ]
+
+                else
+                    []
+               )
+            ++ [ if status == InteractionTracker.Blurred then
+                    field
+                        |> F.allErrors
+                        |> List.map
+                            (\e ->
+                                H.li [ HA.style "color" "red" ] [ H.text <| errorToString e ]
+                            )
+                        |> H.ul []
+
+                 else
+                    H.text ""
+               ]
 
 
 statusToString : InteractionTracker.Status -> String

@@ -1,9 +1,11 @@
 module Dillon.Date exposing
     ( Date
+    , add
     , errorToString
     , fieldType
     , fromString
     , isAfter
+    , jul9th2025
     , nights
     , toString
     )
@@ -14,6 +16,11 @@ import Field as F exposing (Error)
 
 type Date
     = Date Date.Date
+
+
+jul9th2025 : Date
+jul9th2025 =
+    Date (Date.fromRataDie 739441)
 
 
 fromString : String -> Result Error Date
@@ -35,6 +42,11 @@ isAfter (Date first) (Date second) =
     -- Returns True iff the second date comes after the first date.
     --
     Date.compare first second == LT
+
+
+add : Int -> Date -> Date
+add nDays (Date date) =
+    Date (Date.fromRataDie (Date.toRataDie date + nDays))
 
 
 nights : Date -> Date -> Int

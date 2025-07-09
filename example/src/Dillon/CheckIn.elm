@@ -5,6 +5,7 @@ module Dillon.CheckIn exposing
     , Output
     , Setters
     , form
+    , nameErrorToString
     )
 
 import Dillon.Date as Date exposing (Date)
@@ -77,7 +78,7 @@ form =
 
 init : Fields
 init =
-    { name = F.empty F.nonBlankString
+    { name = F.fromString F.nonBlankString "dillon"
     , checkIn = F.empty Date.fieldType
     , checkInTime = F.empty Time.fieldType
     , checkOut = F.empty Date.fieldType
@@ -174,3 +175,16 @@ validate fields =
         |> F.and (fields.checkInTime |> F.mapError CheckInTimeError)
         |> F.and (fields.checkOut |> F.mapError CheckOutError)
         |> F.and (fields.subscribe |> F.mapError SubscribeError)
+
+
+
+-- NAME
+
+
+nameErrorToString : F.Error -> String
+nameErrorToString =
+    F.errorToString
+        { onBlank = "The name is required."
+        , onSyntaxError = always ""
+        , onValidationError = always ""
+        }
