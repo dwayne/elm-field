@@ -5,22 +5,29 @@ module Dillon.Date exposing
     , fieldType
     , fromString
     , isAfter
-    , jul9th2025
+    , jul1st2025
     , nights
     , toString
+    , today
     )
 
 import Date
 import Field as F exposing (Error)
+import Task
 
 
 type Date
     = Date Date.Date
 
 
-jul9th2025 : Date
-jul9th2025 =
-    Date (Date.fromRataDie 739441)
+jul1st2025 : Date
+jul1st2025 =
+    Date (Date.fromRataDie 739433)
+
+
+today : (Date -> msg) -> Cmd msg
+today toMsg =
+    Task.perform (Date >> toMsg) Date.today
 
 
 fromString : String -> Result Error Date

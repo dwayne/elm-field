@@ -36,7 +36,8 @@ main =
 
 
 type alias Model =
-    { checkIn : CheckIn
+    { today : Date
+    , checkIn : CheckIn
     , nameTracker : InteractionTracker.State
     , checkInTracker : InteractionTracker.State
     , checkInTimeTracker : InteractionTracker.State
@@ -48,9 +49,10 @@ type alias Model =
     }
 
 
-init : () -> ( Model, Cmd msg )
+init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { checkIn = CheckIn.form
+    ( { today = Date.jul1st2025
+      , checkIn = CheckIn.form
       , nameTracker = InteractionTracker.init
       , checkInTracker = InteractionTracker.init
       , checkInTimeTracker = InteractionTracker.init
@@ -60,13 +62,8 @@ init _ =
       , isSubmitting = False
       , maybeOutput = Nothing
       }
-    , Cmd.none
+    , Date.today GotDate
     )
-
-
-today : Date
-today =
-    Date.jul9th2025
 
 
 timerConfig : Timer.Config Msg
@@ -83,7 +80,8 @@ timerConfig =
 
 
 type Msg
-    = InputName String
+    = GotDate Date
+    | InputName String
     | ChangedNameTracker (InteractionTracker.Msg Msg)
     | InputCheckIn String
     | ChangedCheckInTracker (InteractionTracker.Msg Msg)
@@ -101,6 +99,11 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GotDate date ->
+            ( { model | today = date }
+            , Cmd.none
+            )
+
         InputName s ->
             ( { model | checkIn = Form.update .setName s model.checkIn }
             , Cmd.none
@@ -116,7 +119,7 @@ update msg model =
             )
 
         InputCheckIn s ->
-            ( { model | checkIn = Form.update .setCheckIn { today = today, s = s } model.checkIn }
+            ( { model | checkIn = Form.update .setCheckIn { today = model.today, s = s } model.checkIn }
             , Cmd.none
             )
 
@@ -215,7 +218,7 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { checkIn, nameTracker, checkInTracker, checkInTimeTracker, checkOutTracker, subscribeTracker, timer, isSubmitting, maybeOutput } =
+view { today, checkIn, nameTracker, checkInTracker, checkInTimeTracker, checkOutTracker, subscribeTracker, timer, isSubmitting, maybeOutput } =
     let
         fields =
             Form.toFields checkIn
