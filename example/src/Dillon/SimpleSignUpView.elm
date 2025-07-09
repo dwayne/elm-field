@@ -1,4 +1,4 @@
-module Dillon.SimpleView exposing (main)
+module Dillon.SimpleSignUpView exposing (main)
 
 import Browser as B
 import Dillon.Role as Role exposing (Role)

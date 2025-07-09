@@ -1,4 +1,4 @@
-module Dillon.ComplexView exposing (main)
+module Dillon.ComplexSignUpView exposing (main)
 
 --
 -- Based on https://ellie-app.com/myVVqSVC2QZa1.
