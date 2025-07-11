@@ -1,4 +1,4 @@
-module Example1.Data.PasswordConfirmation exposing
+module Example1.PasswordConfirmation exposing
     ( PasswordConfirmation
     , errorToString
     , fieldType

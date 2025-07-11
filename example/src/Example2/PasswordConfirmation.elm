@@ -1,4 +1,4 @@
-module Example2.Data.PasswordConfirmation exposing
+module Example2.PasswordConfirmation exposing
     ( CustomError(..)
     , Error
     , PasswordConfirmation

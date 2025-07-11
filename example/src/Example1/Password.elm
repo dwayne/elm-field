@@ -1,26 +1,16 @@
-module Example2.Data.Password exposing
-    ( CustomError(..)
-    , Error
-    , Password
+module Example1.Password exposing
+    ( Password
+    , errorToString
     , fieldType
     , fromString
     , toString
     )
 
-import Field.Advanced as F
+import Field as F exposing (Error)
 
 
 type Password
     = Password String
-
-
-type alias Error =
-    F.Error CustomError
-
-
-type CustomError
-    = TooShort Int
-    | MissingRequiredChars String
 
 
 fromString : String -> Result Error Password
@@ -32,13 +22,13 @@ fromString =
                     String.length s
             in
             if n < 8 then
-                Err (F.customError <| TooShort n)
+                Err <| F.customError "The password must have at least 8 characters."
 
             else if hasRequiredChars s then
-                Ok (Password s)
+                Ok <| Password s
 
             else
-                Err (F.customError <| MissingRequiredChars "!@#$%^&*")
+                Err <| F.customError "The password must contain at least 1 of each of the following: a lowercase character, an uppercase character, a number, and a special character in the set \"(!@#$%^&*)\"."
         )
 
 
@@ -61,9 +51,18 @@ toString (Password s) =
     s
 
 
-fieldType : F.Type Error Password
+fieldType : F.Type Password
 fieldType =
     F.customType
         { fromString = fromString
         , toString = toString
+        }
+
+
+errorToString : Error -> String
+errorToString =
+    F.errorToString
+        { onBlank = "The password is required."
+        , onSyntaxError = always ""
+        , onValidationError = always ""
         }

@@ -1,4 +1,4 @@
-module Example1.Data.Email exposing
+module Example1.Email exposing
     ( Email
     , errorToString
     , fieldType

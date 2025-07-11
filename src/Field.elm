@@ -1,6 +1,8 @@
 module Field exposing
     ( Error
     , Field
+    , FieldBool
+    , FieldString
     , Type
     , allErrors
     , and
@@ -41,6 +43,8 @@ module Field exposing
     , isValid
     , lastError
     , mapError
+    , mapType
+    , mapTypeError
     , nonBlankString
     , nonEmptyString
     , nonNegativeFloat
@@ -49,6 +53,8 @@ module Field exposing
     , positiveFloat
     , positiveInt
     , prependError
+    , setCustomError
+    , setCustomErrors
     , setError
     , setErrors
     , setFromString
@@ -65,6 +71,7 @@ module Field exposing
     , toMaybe
     , toRawString
     , toResult
+    , toState
     , toString
     , toType
     , toValidation
@@ -88,6 +95,14 @@ import Validation as V exposing (Validation)
 
 type alias Field a =
     F.Field Error a
+
+
+type alias FieldBool =
+    F.Field Never Bool
+
+
+type alias FieldString =
+    F.Field Never String
 
 
 
@@ -121,6 +136,9 @@ subsetOfInt =
 customInt : (Int -> Result Error Int) -> Type Int
 customInt =
     F.customInt
+        { blank = F.blankError
+        , syntaxError = F.syntaxError
+        }
 
 
 float : Type Float
@@ -146,9 +164,12 @@ subsetOfFloat =
 customFloat : (Float -> Result Error Float) -> Type Float
 customFloat =
     F.customFloat
+        { blank = F.blankError
+        , syntaxError = F.syntaxError
+        }
 
 
-bool : Type Bool
+bool : F.Type Never Bool
 bool =
     F.bool
 
@@ -178,7 +199,7 @@ optional =
     F.optional
 
 
-string : Type String
+string : F.Type Never String
 string =
     F.string
 
@@ -195,7 +216,7 @@ subsetOfNonEmptyString =
 
 customNonEmptyString : (String -> Result Error String) -> Type String
 customNonEmptyString =
-    F.customNonEmptyString
+    F.customNonEmptyString F.blankError
 
 
 nonBlankString : Type String
@@ -210,7 +231,7 @@ subsetOfNonBlankString =
 
 customNonBlankString : (String -> Result Error String) -> Type String
 customNonBlankString =
-    F.customNonBlankString
+    F.customNonBlankString F.blankError
 
 
 subsetOfString : (String -> Bool) -> Type String
@@ -223,6 +244,11 @@ customString =
     F.customString
 
 
+subsetOfType : (a -> Bool) -> Type a -> Type a
+subsetOfType =
+    F.subsetOfType
+
+
 customType :
     { fromString : String -> Result Error a
     , toString : a -> String
@@ -232,14 +258,63 @@ customType =
     F.customType
 
 
-subsetOfType : (a -> Bool) -> Type a -> Type a
-subsetOfType =
-    F.subsetOfType
-
-
 trim : (String -> Result Error a) -> String -> Result Error a
 trim =
     F.trim
+
+
+mapType : (a -> b) -> (b -> a) -> Type a -> Type b
+mapType =
+    F.mapType
+
+
+mapTypeError : (x -> y) -> F.Type x a -> F.Type y a
+mapTypeError =
+    F.mapTypeError
+
+
+
+-- ERROR
+
+
+type alias Error =
+    F.Error String
+
+
+blankError : Error
+blankError =
+    F.blankError
+
+
+syntaxError : String -> Error
+syntaxError =
+    F.syntaxError
+
+
+validationError : String -> Error
+validationError =
+    F.validationError
+
+
+customError : String -> Error
+customError =
+    F.customError
+
+
+errorToString :
+    { onBlank : String
+    , onSyntaxError : String -> String
+    , onValidationError : String -> String
+    }
+    -> Error
+    -> String
+errorToString { onBlank, onSyntaxError, onValidationError } =
+    F.errorToString
+        { onBlank = onBlank
+        , onSyntaxError = onSyntaxError
+        , onValidationError = onValidationError
+        , onCustomError = identity
+        }
 
 
 
@@ -265,24 +340,34 @@ fromValue =
 -- CHANGE
 
 
-setFromString : String -> Field a -> Field a
+setFromString : String -> F.Field e a -> F.Field e a
 setFromString =
     F.setFromString
 
 
-setFromValue : a -> Field a -> Field a
+setFromValue : a -> F.Field e a -> F.Field e a
 setFromValue =
     F.setFromValue
 
 
-setError : String -> Field a -> Field a
+setError : e -> F.Field e a -> F.Field e a
 setError =
-    F.setError
+    fail
 
 
-setErrors : String -> List String -> Field a -> Field a
+setErrors : e -> List e -> F.Field e a -> F.Field e a
 setErrors =
-    F.setErrors
+    failWithErrors
+
+
+setCustomError : String -> Field a -> Field a
+setCustomError =
+    F.setCustomError
+
+
+setCustomErrors : String -> List String -> Field a -> Field a
+setCustomErrors =
+    F.setCustomErrors
 
 
 
@@ -363,6 +448,11 @@ toType =
     F.toType
 
 
+toState : F.Field e a -> F.State e a
+toState =
+    F.toState
+
+
 
 -- APPLICATIVE
 
@@ -433,50 +523,6 @@ andFinally =
 
 
 
--- ERROR
-
-
-type alias Error =
-    F.Error String
-
-
-blankError : Error
-blankError =
-    F.blankError
-
-
-syntaxError : String -> Error
-syntaxError =
-    F.syntaxError
-
-
-validationError : String -> Error
-validationError =
-    F.validationError
-
-
-customError : String -> Error
-customError =
-    F.customError
-
-
-errorToString :
-    { onBlank : String
-    , onSyntaxError : String -> String
-    , onValidationError : String -> String
-    }
-    -> Error
-    -> String
-errorToString { onBlank, onSyntaxError, onValidationError } =
-    F.errorToString
-        { onBlank = onBlank
-        , onSyntaxError = onSyntaxError
-        , onValidationError = onValidationError
-        , onCustomError = identity
-        }
-
-
-
 -- HANDLE ERRORS
 
 
@@ -485,12 +531,12 @@ mapError =
     F.mapError
 
 
-fail : Error -> Field a -> Field a
+fail : e -> F.Field e a -> F.Field e a
 fail =
     F.fail
 
 
-failWithErrors : Error -> List Error -> Field a -> Field a
+failWithErrors : e -> List e -> F.Field e a -> F.Field e a
 failWithErrors =
     F.failWithErrors
 

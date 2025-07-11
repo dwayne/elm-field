@@ -1,8 +1,9 @@
-module Example2.Data.SignUp exposing
+module Example1.SignUp exposing
     ( Error(..)
     , Fields
     , SignUp
     , Submission
+    , errorToString
     , init
     , setEmail
     , setPassword
@@ -12,11 +13,11 @@ module Example2.Data.SignUp exposing
     , toFields
     )
 
-import Example2.Data.Email as Email exposing (Email)
-import Example2.Data.Password as Password exposing (Password)
-import Example2.Data.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
-import Example2.Data.Username as Username exposing (Username)
-import Field.Advanced as F
+import Example1.Email as Email exposing (Email)
+import Example1.Password as Password exposing (Password)
+import Example1.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
+import Example1.Username as Username exposing (Username)
+import Field as F exposing (Field)
 
 
 type SignUp
@@ -24,10 +25,10 @@ type SignUp
 
 
 type alias Fields =
-    { username : F.Field Username.Error Username
-    , email : F.Field Email.Error Email
-    , password : F.Field Password.Error Password
-    , passwordConfirmation : F.Field PasswordConfirmation.Error PasswordConfirmation
+    { username : Field Username
+    , email : Field Email
+    , password : Field Password
+    , passwordConfirmation : Field PasswordConfirmation
     }
 
 
@@ -69,29 +70,25 @@ setPasswordConfirmation s (SignUp fields) =
     SignUp { fields | passwordConfirmation = updatePasswordConfirmation fields.password passwordConfirmation }
 
 
-updatePasswordConfirmation :
-    F.Field Password.Error Password
-    -> F.Field PasswordConfirmation.Error PasswordConfirmation
-    -> F.Field PasswordConfirmation.Error PasswordConfirmation
+updatePasswordConfirmation : Field Password -> Field PasswordConfirmation -> Field PasswordConfirmation
 updatePasswordConfirmation passwordField passwordConfirmationField =
     (\password passwordConfirmation ->
         if Password.toString password == PasswordConfirmation.toString passwordConfirmation then
             passwordConfirmationField
 
         else
-            F.setError PasswordConfirmation.Mismatch passwordConfirmationField
+            F.setCustomError "The password confirmation does not match." passwordConfirmationField
     )
-        |> Just
-        |> F.applyMaybe passwordField
-        |> F.applyMaybe passwordConfirmationField
-        |> Maybe.withDefault passwordConfirmationField
+        |> F.get passwordField
+        |> F.and passwordConfirmationField
+        |> F.withDefault passwordConfirmationField
 
 
 type Error
-    = UsernameError Username.Error
-    | EmailError Email.Error
-    | PasswordError Password.Error
-    | PasswordConfirmationError PasswordConfirmation.Error
+    = UsernameError F.Error
+    | EmailError F.Error
+    | PasswordError F.Error
+    | PasswordConfirmationError F.Error
 
 
 type alias Submission =
@@ -111,6 +108,22 @@ submit (SignUp fields) =
         |> F.and (fields.password |> F.mapError PasswordError)
         |> F.and (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
         |> F.andResult
+
+
+errorToString : Error -> String
+errorToString error =
+    case error of
+        UsernameError e ->
+            Username.errorToString e
+
+        EmailError e ->
+            Email.errorToString e
+
+        PasswordError e ->
+            Password.errorToString e
+
+        PasswordConfirmationError e ->
+            PasswordConfirmation.errorToString e
 
 
 toFields : SignUp -> Fields

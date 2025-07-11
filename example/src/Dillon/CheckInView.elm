@@ -8,7 +8,7 @@ import Browser as B
 import Dillon.CheckIn as CheckIn exposing (CheckIn)
 import Dillon.Date as Date exposing (Date)
 import Dillon.Time as Time exposing (Time)
-import Field as F exposing (Error, Field)
+import Field as F exposing (Field)
 import Html as H
 import Html.Attributes as HA
 import Html.Events as HE
@@ -355,7 +355,7 @@ viewInteractiveInput :
     , type_ : String
     , field : Field a
     , tracker : InteractionTracker.State
-    , errorToString : Error -> String
+    , errorToString : F.Error -> String
     , isRequired : Bool
     , isDisabled : Bool
     , attrs : List (H.Attribute msg)
@@ -408,7 +408,7 @@ toFieldInput { isRequired, isDisabled, onInput, attrs } { id, field, focus, inpu
 viewCheckbox :
     { id : String
     , label : String
-    , field : Field Bool
+    , field : F.FieldBool
     , tracker : InteractionTracker.State
     , isRequired : Bool
     , isDisabled : Bool
@@ -428,7 +428,7 @@ viewCheckbox { id, label, field, tracker, isRequired, isDisabled, attrs, onToggl
         { id = id
         , label = label
         , type_ = "checkbox"
-        , field = field
+        , field = F.mapError never field
         , tracker = tracker
         , errorToString = always "An unexpected error occurred."
         , isRequired = isRequired

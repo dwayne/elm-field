@@ -28,7 +28,7 @@ type alias Fields =
     , checkIn : Field Date
     , checkInTime : Field Time
     , checkOut : Field Date
-    , subscribe : Field Bool
+    , subscribe : F.FieldBool
     }
 
 
@@ -46,7 +46,6 @@ type Error
     | CheckInError F.Error
     | CheckInTimeError F.Error
     | CheckOutError F.Error
-    | SubscribeError F.Error
 
 
 type alias Output =
@@ -110,7 +109,7 @@ setters =
                         { fields | checkIn = checkIn }
 
                     else
-                        { fields | checkIn = F.setError "You must check in after today." checkIn }
+                        { fields | checkIn = F.setCustomError "You must check in after today." checkIn }
 
                 Nothing ->
                     { fields | checkIn = checkIn }
@@ -126,7 +125,7 @@ setters =
                         { fields | checkInTime = checkInTime }
 
                     else
-                        { fields | checkInTime = F.setError "You must check in between the hours of 9am to 5pm." checkInTime }
+                        { fields | checkInTime = F.setCustomError "You must check in between the hours of 9am to 5pm." checkInTime }
 
                 Nothing ->
                     { fields | checkInTime = checkInTime }
@@ -148,7 +147,7 @@ setters =
                         { fields | checkOut = checkOut }
 
                     else
-                        { fields | checkOut = F.setError "You must check out after you've checked in." checkOut }
+                        { fields | checkOut = F.setCustomError "You must check out after you've checked in." checkOut }
 
                 Nothing ->
                     { fields | checkOut = checkOut }
@@ -174,7 +173,7 @@ validate fields =
         |> F.and (fields.checkIn |> F.mapError CheckInError)
         |> F.and (fields.checkInTime |> F.mapError CheckInTimeError)
         |> F.and (fields.checkOut |> F.mapError CheckOutError)
-        |> F.and (fields.subscribe |> F.mapError SubscribeError)
+        |> F.and (fields.subscribe |> F.mapError never)
 
 
 

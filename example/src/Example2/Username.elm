@@ -1,4 +1,4 @@
-module Example2.Data.Username exposing
+module Example2.Username exposing
     ( CustomError(..)
     , Error
     , Username

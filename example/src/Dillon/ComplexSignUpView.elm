@@ -7,9 +7,9 @@ module Dillon.ComplexSignUpView exposing (main)
 import Browser as B
 import Dillon.Role as Role exposing (Role)
 import Dillon.SignUp as SignUp exposing (SignUp)
-import Example1.Data.Password as Password exposing (Password)
-import Example1.Data.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
-import Example1.Data.Username as Username exposing (Username)
+import Example1.Password as Password exposing (Password)
+import Example1.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
+import Example1.Username as Username exposing (Username)
 import Field as F exposing (Error, Field)
 import Html as H
 import Html.Attributes as HA

@@ -1,6 +1,8 @@
 module Field.Advanced exposing
     ( Error
     , Field
+    , Raw(..)
+    , State
     , Type
     , allErrors
     , and
@@ -14,11 +16,22 @@ module Field.Advanced exposing
     , bool
     , char
     , customError
+    , customFalse
     , customFloat
     , customInt
     , customNonBlankString
     , customNonEmptyString
+    , customOptional
     , customString
+    , customSubsetOfChar
+    , customSubsetOfFloat
+    , customSubsetOfInt
+    , customSubsetOfNonBlankString
+    , customSubsetOfNonEmptyString
+    , customSubsetOfString
+    , customSubsetOfType
+    , customTrim
+    , customTrue
     , customType
     , empty
     , errorToString
@@ -42,6 +55,8 @@ module Field.Advanced exposing
     , lastError
     , mapError
     , mapErrorType
+    , mapType
+    , mapTypeError
     , nonBlankString
     , nonEmptyString
     , nonNegativeFloat
@@ -50,6 +65,8 @@ module Field.Advanced exposing
     , positiveFloat
     , positiveInt
     , prependError
+    , setCustomError
+    , setCustomErrors
     , setError
     , setErrors
     , setFromString
@@ -66,6 +83,7 @@ module Field.Advanced exposing
     , toMaybe
     , toRawString
     , toResult
+    , toState
     , toString
     , toType
     , toValidation
@@ -114,7 +132,7 @@ type alias Type e a =
 
 int : Type (Error e) Int
 int =
-    customInt Ok
+    subsetOfInt (always True)
 
 
 nonNegativeInt : Type (Error e) Int
@@ -128,28 +146,51 @@ positiveInt =
 
 
 subsetOfInt : (Int -> Bool) -> Type (Error e) Int
-subsetOfInt isGood =
+subsetOfInt =
+    customSubsetOfInt
+        { blank = Blank
+        , syntaxError = SyntaxError
+        , validationError = ValidationError << String.fromInt
+        }
+
+
+customSubsetOfInt :
+    { blank : e
+    , syntaxError : String -> e
+    , validationError : Int -> e
+    }
+    -> (Int -> Bool)
+    -> Type e Int
+customSubsetOfInt errors isGood =
     customInt
+        { blank = errors.blank
+        , syntaxError = errors.syntaxError
+        }
         (\n ->
             if isGood n then
                 Ok n
 
             else
-                Err (ValidationError (String.fromInt n))
+                Err (errors.validationError n)
         )
 
 
-customInt : (Int -> Result (Error e) Int) -> Type (Error e) Int
-customInt validate =
+customInt :
+    { blank : e
+    , syntaxError : String -> e
+    }
+    -> (Int -> Result e Int)
+    -> Type e Int
+customInt errors validate =
     { fromString =
-        trim
+        customTrim errors.blank
             (\s ->
                 case String.toInt s of
                     Just n ->
                         validate n
 
                     Nothing ->
-                        Err (SyntaxError s)
+                        Err (errors.syntaxError s)
             )
     , fromValue = validate
     , toString = String.fromInt
@@ -158,7 +199,7 @@ customInt validate =
 
 float : Type (Error e) Float
 float =
-    customFloat Ok
+    subsetOfFloat (always True)
 
 
 nonNegativeFloat : Type (Error e) Float
@@ -172,35 +213,58 @@ positiveFloat =
 
 
 subsetOfFloat : (Float -> Bool) -> Type (Error e) Float
-subsetOfFloat isGood =
+subsetOfFloat =
+    customSubsetOfFloat
+        { blank = Blank
+        , syntaxError = SyntaxError
+        , validationError = ValidationError << String.fromFloat
+        }
+
+
+customSubsetOfFloat :
+    { blank : e
+    , syntaxError : String -> e
+    , validationError : Float -> e
+    }
+    -> (Float -> Bool)
+    -> Type e Float
+customSubsetOfFloat errors isGood =
     customFloat
+        { blank = errors.blank
+        , syntaxError = errors.syntaxError
+        }
         (\f ->
             if isGood f then
                 Ok f
 
             else
-                Err (ValidationError (String.fromFloat f))
+                Err (errors.validationError f)
         )
 
 
-customFloat : (Float -> Result (Error e) Float) -> Type (Error e) Float
-customFloat validate =
+customFloat :
+    { blank : e
+    , syntaxError : String -> e
+    }
+    -> (Float -> Result e Float)
+    -> Type e Float
+customFloat errors validate =
     { fromString =
-        trim
+        customTrim errors.blank
             (\s ->
                 case String.toFloat s of
                     Just f ->
                         validate f
 
                     Nothing ->
-                        Err (SyntaxError s)
+                        Err (errors.syntaxError s)
             )
     , fromValue = validate
     , toString = String.fromFloat
     }
 
 
-bool : Type (Error e) Bool
+bool : Type Never Bool
 bool =
     { fromString =
         \s ->
@@ -220,10 +284,15 @@ bool =
 
 true : Type (Error e) Bool
 true =
+    customTrue (ValidationError << boolToString)
+
+
+customTrue : (Bool -> e) -> Type e Bool
+customTrue toValidationError =
     { fromString =
         \s ->
             if String.isEmpty (String.trim s) then
-                Err (ValidationError s)
+                Err (toValidationError False)
 
             else
                 Ok True
@@ -233,24 +302,29 @@ true =
                 Ok True
 
             else
-                Err (ValidationError (boolToString b))
+                Err (toValidationError b)
     , toString = boolToString
     }
 
 
 false : Type (Error e) Bool
 false =
+    customFalse (ValidationError << boolToString)
+
+
+customFalse : (Bool -> e) -> Type e Bool
+customFalse toValidationError =
     { fromString =
         \s ->
             if String.isEmpty (String.trim s) then
                 Ok False
 
             else
-                Err (ValidationError s)
+                Err (toValidationError True)
     , fromValue =
         \b ->
             if b then
-                Err (ValidationError (boolToString b))
+                Err (toValidationError b)
 
             else
                 Ok False
@@ -273,14 +347,29 @@ char =
 
 
 subsetOfChar : (Char -> Bool) -> Type (Error e) Char
-subsetOfChar isGood =
+subsetOfChar =
+    customSubsetOfChar
+        { blank = Blank
+        , syntaxError = SyntaxError
+        , validationError = ValidationError << String.fromChar
+        }
+
+
+customSubsetOfChar :
+    { blank : e
+    , syntaxError : String -> e
+    , validationError : Char -> e
+    }
+    -> (Char -> Bool)
+    -> Type e Char
+customSubsetOfChar errors isGood =
     let
         validate ch =
             if isGood ch then
                 Ok ch
 
             else
-                Err (ValidationError (String.fromChar ch))
+                Err (errors.validationError ch)
     in
     { fromString =
         \s ->
@@ -289,31 +378,37 @@ subsetOfChar isGood =
                     validate ch
 
                 Just _ ->
-                    Err (ValidationError s)
+                    Err (errors.syntaxError s)
 
                 Nothing ->
-                    Err Blank
+                    Err errors.blank
     , fromValue = validate
     , toString = String.fromChar
     }
 
 
 optional : Type (Error e) a -> Type (Error e) (Maybe a)
-optional tipe =
+optional =
     --
     -- I don't think it would be wise to use optional with string fields.
     --
+    customOptional ((==) Blank)
+
+
+customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
+customOptional isBlankError tipe =
     { fromString =
         \s ->
             case tipe.fromString s of
                 Ok value ->
                     Ok (Just value)
 
-                Err Blank ->
-                    Ok Nothing
-
                 Err err ->
-                    Err err
+                    if isBlankError err then
+                        Ok Nothing
+
+                    else
+                        Err err
     , fromValue =
         \maybeValue ->
             case maybeValue of
@@ -322,11 +417,12 @@ optional tipe =
                         Ok v2 ->
                             Ok (Just v2)
 
-                        Err Blank ->
-                            Ok Nothing
-
                         Err err ->
-                            Err err
+                            if isBlankError err then
+                                Ok Nothing
+
+                            else
+                                Err err
 
                 Nothing ->
                     Ok Nothing
@@ -334,7 +430,7 @@ optional tipe =
     }
 
 
-string : Type (Error e) String
+string : Type Never String
 string =
     customString (String.trim >> Ok)
 
@@ -350,20 +446,33 @@ string =
 
 nonEmptyString : Type (Error e) String
 nonEmptyString =
-    customNonEmptyString Ok
+    customNonEmptyString Blank Ok
 
 
 subsetOfNonEmptyString : (String -> Bool) -> Type (Error e) String
 subsetOfNonEmptyString =
-    customNonEmptyString << validateStringWith
+    customSubsetOfNonEmptyString
+        { blank = Blank
+        , validationError = ValidationError
+        }
 
 
-customNonEmptyString : (String -> Result (Error e) String) -> Type (Error e) String
-customNonEmptyString validate =
+customSubsetOfNonEmptyString :
+    { blank : e
+    , validationError : String -> e
+    }
+    -> (String -> Bool)
+    -> Type e String
+customSubsetOfNonEmptyString errors =
+    customNonEmptyString errors.blank << customValidateStringWith errors.validationError
+
+
+customNonEmptyString : e -> (String -> Result e String) -> Type e String
+customNonEmptyString blank validate =
     customString
         (\s ->
             if String.isEmpty s then
-                Err Blank
+                Err blank
 
             else
                 validate (String.trim s)
@@ -377,29 +486,52 @@ nonBlankString =
 
 subsetOfNonBlankString : (String -> Bool) -> Type (Error e) String
 subsetOfNonBlankString =
-    customNonBlankString << validateStringWith
+    customSubsetOfNonBlankString
+        { blank = Blank
+        , validationError = ValidationError
+        }
 
 
-customNonBlankString : (String -> Result (Error e) String) -> Type (Error e) String
-customNonBlankString validate =
-    customString (trim validate)
+customSubsetOfNonBlankString :
+    { blank : e
+    , validationError : String -> e
+    }
+    -> (String -> Bool)
+    -> Type e String
+customSubsetOfNonBlankString errors =
+    customNonBlankString errors.blank << customValidateStringWith errors.validationError
+
+
+customNonBlankString : e -> (String -> Result e String) -> Type e String
+customNonBlankString blank validate =
+    customString (customTrim blank validate)
 
 
 subsetOfString : (String -> Bool) -> Type (Error e) String
 subsetOfString =
-    customString << validateStringWith
+    customSubsetOfString ValidationError
+
+
+customSubsetOfString : (String -> e) -> (String -> Bool) -> Type e String
+customSubsetOfString toValidationError =
+    customString << customValidateStringWith toValidationError
 
 
 validateStringWith : (String -> Bool) -> String -> Result (Error e) String
-validateStringWith isGood s =
+validateStringWith =
+    customValidateStringWith ValidationError
+
+
+customValidateStringWith : (String -> e) -> (String -> Bool) -> String -> Result e String
+customValidateStringWith toValidationError isGood s =
     if isGood s then
         Ok s
 
     else
-        Err (ValidationError s)
+        Err (toValidationError s)
 
 
-customString : (String -> Result (Error e) String) -> Type (Error e) String
+customString : (String -> Result e String) -> Type e String
 customString validate =
     { fromString = validate
     , fromValue = validate
@@ -409,13 +541,18 @@ customString validate =
 
 subsetOfType : (a -> Bool) -> Type (Error e) a -> Type (Error e) a
 subsetOfType isGood tipe =
+    customSubsetOfType (ValidationError << tipe.toString) isGood tipe
+
+
+customSubsetOfType : (a -> e) -> (a -> Bool) -> Type e a -> Type e a
+customSubsetOfType toValidationError isGood tipe =
     let
         validate value =
             if isGood value then
                 Ok value
 
             else
-                Err (ValidationError (tipe.toString value))
+                Err (toValidationError value)
     in
     { fromString = tipe.fromString >> Result.andThen validate
     , fromValue = tipe.fromValue >> Result.andThen validate
@@ -424,10 +561,10 @@ subsetOfType isGood tipe =
 
 
 customType :
-    { fromString : String -> Result (Error e) a
+    { fromString : String -> Result e a
     , toString : a -> String
     }
-    -> Type (Error e) a
+    -> Type e a
 customType options =
     { fromString = options.fromString
     , fromValue = Ok
@@ -436,16 +573,111 @@ customType options =
 
 
 trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
-trim f s =
+trim =
+    customTrim Blank
+
+
+customTrim : e -> (String -> Result e a) -> String -> Result e a
+customTrim blank f s =
     let
         t =
             String.trim s
     in
     if String.isEmpty t then
-        Err Blank
+        Err blank
 
     else
         f t
+
+
+mapType : (a -> b) -> (b -> a) -> Type e a -> Type e b
+mapType f invF tipe =
+    --
+    -- f >> invF = identity : a -> a
+    -- invF >> f = identity : b -> b
+    --
+    { fromString = tipe.fromString >> Result.map f
+    , fromValue = invF >> tipe.fromValue >> Result.map f
+    , toString = invF >> tipe.toString
+    }
+
+
+mapTypeError : (x -> y) -> Type x a -> Type y a
+mapTypeError f tipe =
+    { fromString = tipe.fromString >> Result.mapError f
+    , fromValue = tipe.fromValue >> Result.mapError f
+    , toString = tipe.toString
+    }
+
+
+
+-- ERROR
+
+
+type Error e
+    = Blank
+    | SyntaxError String
+    | ValidationError String
+    | CustomError e
+
+
+blankError : Error e
+blankError =
+    Blank
+
+
+syntaxError : String -> Error e
+syntaxError =
+    SyntaxError
+
+
+validationError : String -> Error e
+validationError =
+    ValidationError
+
+
+customError : e -> Error e
+customError =
+    CustomError
+
+
+errorToString :
+    { onBlank : String
+    , onSyntaxError : String -> String
+    , onValidationError : String -> String
+    , onCustomError : e -> String
+    }
+    -> Error e
+    -> String
+errorToString { onBlank, onSyntaxError, onValidationError, onCustomError } error =
+    case error of
+        Blank ->
+            onBlank
+
+        SyntaxError s ->
+            onSyntaxError s
+
+        ValidationError s ->
+            onValidationError s
+
+        CustomError e ->
+            onCustomError e
+
+
+mapErrorType : (x -> y) -> Error x -> Error y
+mapErrorType f error =
+    case error of
+        Blank ->
+            Blank
+
+        SyntaxError s ->
+            SyntaxError s
+
+        ValidationError s ->
+            ValidationError s
+
+        CustomError x ->
+            CustomError (f x)
 
 
 
@@ -497,13 +729,23 @@ setFromValue value (Field tipe state) =
         }
 
 
-setError : e -> Field (Error e) a -> Field (Error e) a
+setError : e -> Field e a -> Field e a
 setError =
+    fail
+
+
+setErrors : e -> List e -> Field e a -> Field e a
+setErrors =
+    failWithErrors
+
+
+setCustomError : e -> Field (Error e) a -> Field (Error e) a
+setCustomError =
     fail << CustomError
 
 
-setErrors : e -> List e -> Field (Error e) a -> Field (Error e) a
-setErrors error errors =
+setCustomErrors : e -> List e -> Field (Error e) a -> Field (Error e) a
+setCustomErrors error errors =
     failWithErrors (CustomError error) (List.map CustomError errors)
 
 
@@ -602,6 +844,11 @@ toType (Field tipe _) =
     tipe
 
 
+toState : Field e a -> State e a
+toState (Field _ state) =
+    state
+
+
 
 -- APPLICATIVE
 
@@ -696,86 +943,13 @@ andFinally { onSuccess, onFailure } validation =
 
 
 
--- ERROR
-
-
-type Error e
-    = Blank
-    | SyntaxError String
-    | ValidationError String
-    | CustomError e
-
-
-blankError : Error e
-blankError =
-    Blank
-
-
-syntaxError : String -> Error e
-syntaxError =
-    SyntaxError
-
-
-validationError : String -> Error e
-validationError =
-    ValidationError
-
-
-customError : e -> Error e
-customError =
-    CustomError
-
-
-errorToString :
-    { onBlank : String
-    , onSyntaxError : String -> String
-    , onValidationError : String -> String
-    , onCustomError : e -> String
-    }
-    -> Error e
-    -> String
-errorToString { onBlank, onSyntaxError, onValidationError, onCustomError } error =
-    case error of
-        Blank ->
-            onBlank
-
-        SyntaxError s ->
-            onSyntaxError s
-
-        ValidationError s ->
-            onValidationError s
-
-        CustomError e ->
-            onCustomError e
-
-
-mapErrorType : (x -> y) -> Error x -> Error y
-mapErrorType f error =
-    case error of
-        Blank ->
-            Blank
-
-        SyntaxError s ->
-            SyntaxError s
-
-        ValidationError s ->
-            ValidationError s
-
-        CustomError x ->
-            CustomError (f x)
-
-
-
 -- HANDLE ERRORS
 
 
 mapError : (x -> y) -> Field x a -> Field y a
 mapError f (Field tipe state) =
     Field
-        { fromString = tipe.fromString >> Result.mapError f
-        , fromValue = tipe.fromValue >> Result.mapError f
-        , toString = tipe.toString
-        }
+        (mapTypeError f tipe)
         { raw = state.raw
         , processed = V.mapError f state.processed
         }

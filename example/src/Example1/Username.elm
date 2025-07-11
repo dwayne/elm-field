@@ -1,4 +1,4 @@
-module Example1.Data.Username exposing
+module Example1.Username exposing
     ( Username
     , errorToString
     , fieldType

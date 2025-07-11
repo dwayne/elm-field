@@ -2,7 +2,7 @@ module Debouncing exposing (main)
 
 import Browser as B
 import Browser.Dom as BD
-import Example1.Data.Username as Username exposing (Username)
+import Example1.Username as Username exposing (Username)
 import Field as F exposing (Field)
 import Html as H
 import Html.Attributes as HA

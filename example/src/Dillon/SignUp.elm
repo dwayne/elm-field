@@ -8,9 +8,9 @@ module Dillon.SignUp exposing
     )
 
 import Dillon.Role as Role exposing (Role)
-import Example1.Data.Password as Password exposing (Password)
-import Example1.Data.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
-import Example1.Data.Username as Username exposing (Username)
+import Example1.Password as Password exposing (Password)
+import Example1.PasswordConfirmation as PasswordConfirmation exposing (PasswordConfirmation)
+import Example1.Username as Username exposing (Username)
 import Field as F exposing (Field)
 import Lib.Form as Form exposing (Form)
 import Validation exposing (Validation)
@@ -112,7 +112,7 @@ updatePasswordConfirmation passwordField passwordConfirmationField =
             passwordConfirmationField
 
         else
-            F.setError "The password confirmation does not match." passwordConfirmationField
+            F.setCustomError "The password confirmation does not match." passwordConfirmationField
     )
         |> F.get passwordField
         |> F.and passwordConfirmationField

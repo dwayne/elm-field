@@ -1,4 +1,4 @@
-module Example2.Data.Error exposing
+module Example2.Error exposing
     ( emailErrorToString
     , passwordConfirmationErrorToString
     , passwordErrorToString
@@ -6,11 +6,11 @@ module Example2.Data.Error exposing
     , usernameErrorToString
     )
 
-import Example2.Data.Email as Email
-import Example2.Data.Password as Password
-import Example2.Data.PasswordConfirmation as PasswordConfirmation
-import Example2.Data.SignUp as SignUp
-import Example2.Data.Username as Username
+import Example2.Email as Email
+import Example2.Password as Password
+import Example2.PasswordConfirmation as PasswordConfirmation
+import Example2.SignUp as SignUp
+import Example2.Username as Username
 import Field.Advanced as F
 
 
