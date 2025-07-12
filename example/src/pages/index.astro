@@ -1,1 +1,28 @@
-Hello, world!
+<div id="Dillon.SimpleSignUpView"></div>
+<div id="Dillon.ComplexSignUpView"></div>
+<div id="Dillon.CheckInView"></div>
+<script>
+  import { Elm } from "../Dillon/SimpleSignUpView.elm?with=../Dillon/ComplexSignUpView.elm";
+  //
+  // import { Elm } from "../Dillon/SimpleSignUpView.elm?with=../Dillon/ComplexSignUpView.elm&with=../Dillon/CheckInView.elm";
+  //
+  // N.B. When I use 3 it doesn't work, though the very first time I tried it, it worked.
+  //
+  // Another issue I noticed is that the Elm Debuggers from multiple Elm apps overlap and only the debugger for the last
+  // Elm app can be accessed.
+  //
+
+  console.log(Elm);
+
+  Elm.Dillon.SimpleSignUpView.init({
+    node: document.getElementById("Dillon.SimpleSignUpView")
+  });
+
+  Elm.Dillon.ComplexSignUpView.init({
+    node: document.getElementById("Dillon.ComplexSignUpView")
+  });
+
+  // Elm.Dillon.CheckInView.init({
+  //   node: document.getElementById("Dillon.CheckInView")
+  // });
+</script>
