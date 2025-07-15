@@ -15,6 +15,7 @@ module Field.Advanced exposing
     , blankError
     , bool
     , char
+    , clean
     , customError
     , customFalse
     , customFloat
@@ -33,6 +34,7 @@ module Field.Advanced exposing
     , customTrim
     , customTrue
     , customType
+    , dirty
     , empty
     , errorToString
     , fail
@@ -747,6 +749,20 @@ setCustomError =
 setCustomErrors : e -> List e -> Field (Error e) a -> Field (Error e) a
 setCustomErrors error errors =
     failWithErrors (CustomError error) (List.map CustomError errors)
+
+
+clean : Field e a -> Field e a
+clean (Field tipe state) =
+    Field
+        tipe
+        { state | raw = Initial (rawToString state.raw) }
+
+
+dirty : Field e a -> Field e a
+dirty (Field tipe state) =
+    Field
+        tipe
+        { state | raw = Dirty (rawToString state.raw) }
 
 
 

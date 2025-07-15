@@ -15,6 +15,7 @@ module Field exposing
     , blankError
     , bool
     , char
+    , clean
     , customError
     , customFloat
     , customInt
@@ -22,6 +23,7 @@ module Field exposing
     , customNonEmptyString
     , customString
     , customType
+    , dirty
     , empty
     , errorToString
     , fail
@@ -368,6 +370,16 @@ setCustomError =
 setCustomErrors : String -> List String -> Field a -> Field a
 setCustomErrors =
     F.setCustomErrors
+
+
+clean : F.Field e a -> F.Field e a
+clean =
+    F.clean
+
+
+dirty : F.Field e a -> F.Field e a
+dirty =
+    F.dirty
 
 
 
