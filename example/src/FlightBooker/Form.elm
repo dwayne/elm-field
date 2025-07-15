@@ -144,7 +144,11 @@ updateReturn return departure fields =
 
             else
                 { fields
-                    | maybeReturn = Just <| F.setCustomError "The return date must be on or after the departure date." return
+                    | maybeReturn =
+                        return
+                            |> F.setCustomError "The return date must be on or after the departure date."
+                            |> F.dirty
+                            |> Just
                 }
 
         _ ->
