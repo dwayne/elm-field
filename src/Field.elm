@@ -1,5 +1,6 @@
 module Field exposing
-    ( Error
+    ( CustomBoolOptions
+    , Error
     , Field
     , FieldBool
     , FieldString
@@ -17,12 +18,15 @@ module Field exposing
     , char
     , clean
     , customError
-    , customFloat
-    , customInt
     , customNonBlankString
     , customNonEmptyString
     , customString
+    , customSubsetOfBool
     , customType
+    , defaultBoolToString
+    , defaultCustomBoolOptions
+    , defaultFalsy
+    , defaultTruthy
     , dirty
     , empty
     , errorToString
@@ -92,6 +96,7 @@ module Field exposing
     )
 
 import Field.Advanced as F
+import Set exposing (Set)
 import Validation as V exposing (Validation)
 
 
@@ -117,6 +122,10 @@ type alias FieldString =
 
 type alias Type a =
     F.Type Error a
+
+
+
+-- TYPE: INT
 
 
 int : Type Int
@@ -149,12 +158,8 @@ subsetOfInt =
     F.subsetOfInt
 
 
-customInt : (Int -> Result Error Int) -> Type Int
-customInt =
-    F.customInt
-        { blank = F.blankError
-        , syntaxError = F.syntaxError
-        }
+
+-- TYPE: FLOAT
 
 
 float : Type Float
@@ -187,15 +192,11 @@ subsetOfFloat =
     F.subsetOfFloat
 
 
-customFloat : (Float -> Result Error Float) -> Type Float
-customFloat =
-    F.customFloat
-        { blank = F.blankError
-        , syntaxError = F.syntaxError
-        }
+
+-- TYPE: BOOL
 
 
-bool : F.Type Never Bool
+bool : Type Bool
 bool =
     F.bool
 
@@ -208,6 +209,39 @@ true =
 false : Type Bool
 false =
     F.false
+
+
+type alias CustomBoolOptions =
+    F.CustomBoolOptions
+
+
+defaultCustomBoolOptions : CustomBoolOptions
+defaultCustomBoolOptions =
+    F.defaultCustomBoolOptions
+
+
+defaultTruthy : Set String
+defaultTruthy =
+    F.defaultTruthy
+
+
+defaultFalsy : Set String
+defaultFalsy =
+    F.defaultFalsy
+
+
+defaultBoolToString : Bool -> String
+defaultBoolToString =
+    F.defaultBoolToString
+
+
+customSubsetOfBool : CustomBoolOptions -> (Bool -> Bool) -> Type Bool
+customSubsetOfBool =
+    F.customSubsetOfBool
+        { blank = F.blankError
+        , syntaxError = F.syntaxError
+        , validationError = F.validationError
+        }
 
 
 char : Type Char

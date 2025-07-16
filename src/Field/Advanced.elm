@@ -1,5 +1,6 @@
 module Field.Advanced exposing
-    ( Error
+    ( CustomBoolOptions
+    , Error
     , Field
     , Raw(..)
     , State
@@ -16,14 +17,15 @@ module Field.Advanced exposing
     , bool
     , char
     , clean
+    , customBool
     , customError
-    , customFalse
     , customFloat
     , customInt
     , customNonBlankString
     , customNonEmptyString
     , customOptional
     , customString
+    , customSubsetOfBool
     , customSubsetOfChar
     , customSubsetOfFloat
     , customSubsetOfInt
@@ -32,8 +34,11 @@ module Field.Advanced exposing
     , customSubsetOfString
     , customSubsetOfType
     , customTrim
-    , customTrue
     , customType
+    , defaultBoolToString
+    , defaultCustomBoolOptions
+    , defaultFalsy
+    , defaultTruthy
     , dirty
     , empty
     , errorToString
@@ -78,6 +83,7 @@ module Field.Advanced exposing
     , setFromString
     , setFromValue
     , string
+    , subsetOfBool
     , subsetOfChar
     , subsetOfFloat
     , subsetOfInt
@@ -103,6 +109,7 @@ module Field.Advanced exposing
     , withDefault
     )
 
+import Set exposing (Set)
 import Validation as V exposing (Validation)
 
 
@@ -134,6 +141,10 @@ type alias Type e a =
     , fromValue : a -> Result e a
     , toString : a -> String
     }
+
+
+
+-- TYPE: INT
 
 
 int : Type (Error e) Int
@@ -213,6 +224,10 @@ customInt errors validate =
     }
 
 
+
+-- TYPE: FLOAT
+
+
 float : Type (Error e) Float
 float =
     subsetOfFloat (always True)
@@ -290,81 +305,139 @@ customFloat errors validate =
     }
 
 
-bool : Type Never Bool
-bool =
-    { fromString =
-        \s ->
-            let
-                t =
-                    String.trim s
-            in
-            if String.isEmpty t then
-                Ok False
 
-            else
-                Ok True
-    , fromValue = Ok
-    , toString = boolToString
-    }
+-- TYPE: BOOL
+
+
+bool : Type (Error e) Bool
+bool =
+    subsetOfBool (always True)
 
 
 true : Type (Error e) Bool
 true =
-    customTrue (ValidationError << boolToString)
-
-
-customTrue : (Bool -> e) -> Type e Bool
-customTrue toValidationError =
-    { fromString =
-        \s ->
-            if String.isEmpty (String.trim s) then
-                Err (toValidationError False)
-
-            else
-                Ok True
-    , fromValue =
-        \b ->
-            if b then
-                Ok True
-
-            else
-                Err (toValidationError b)
-    , toString = boolToString
-    }
+    subsetOfBool ((==) True)
 
 
 false : Type (Error e) Bool
 false =
-    customFalse (ValidationError << boolToString)
+    subsetOfBool ((==) False)
 
 
-customFalse : (Bool -> e) -> Type e Bool
-customFalse toValidationError =
-    { fromString =
-        \s ->
-            if String.isEmpty (String.trim s) then
-                Ok False
+subsetOfBool : (Bool -> Bool) -> Type (Error e) Bool
+subsetOfBool =
+    customSubsetOfBool
+        { blank = Blank
+        , syntaxError = SyntaxError
+        , validationError = ValidationError
+        }
+        defaultCustomBoolOptions
 
-            else
-                Err (toValidationError True)
-    , fromValue =
-        \b ->
-            if b then
-                Err (toValidationError b)
 
-            else
-                Ok False
-    , toString = boolToString
+type alias CustomBoolOptions =
+    { truthy : Set String
+    , falsy : Set String
+    , toString : Bool -> String
+    , caseSensitive : Bool
     }
 
 
-boolToString : Bool -> String
-boolToString b =
+defaultCustomBoolOptions : CustomBoolOptions
+defaultCustomBoolOptions =
+    { truthy = defaultTruthy
+    , falsy = defaultFalsy
+    , toString = defaultBoolToString
+    , caseSensitive = False
+    }
+
+
+defaultTruthy : Set String
+defaultTruthy =
+    Set.fromList
+        [ "true"
+        , "1"
+        , "yes"
+        , "on"
+        , "y"
+        , "enabled"
+        ]
+
+
+defaultFalsy : Set String
+defaultFalsy =
+    Set.fromList
+        [ "false"
+        , "0"
+        , "no"
+        , "off"
+        , "n"
+        , "disabled"
+        ]
+
+
+defaultBoolToString : Bool -> String
+defaultBoolToString b =
     if b then
-        "t"
+        "true"
 
     else
-        ""
+        "false"
+
+
+customSubsetOfBool :
+    { blank : e
+    , syntaxError : String -> e
+    , validationError : String -> e
+    }
+    -> CustomBoolOptions
+    -> (Bool -> Bool)
+    -> Type e Bool
+customSubsetOfBool errors options isGood =
+    customBool
+        { blank = errors.blank
+        , syntaxError = errors.syntaxError
+        }
+        options
+        (\b ->
+            if isGood b then
+                Ok b
+
+            else
+                Err (errors.validationError <| options.toString b)
+        )
+
+
+customBool :
+    { blank : e
+    , syntaxError : String -> e
+    }
+    -> CustomBoolOptions
+    -> (Bool -> Result e Bool)
+    -> Type e Bool
+customBool errors options validate =
+    { fromString =
+        customTrim errors.blank
+            (\s ->
+                let
+                    t =
+                        if options.caseSensitive then
+                            s
+
+                        else
+                            String.toLower s
+                in
+                if Set.member t options.truthy then
+                    validate True
+
+                else if Set.member t options.falsy then
+                    validate False
+
+                else
+                    Err (errors.syntaxError s)
+            )
+    , fromValue = validate
+    , toString = options.toString
+    }
 
 
 char : Type (Error e) Char
@@ -641,10 +714,10 @@ mapTypeError f tipe =
 
 
 type Error e
-    = Blank
-    | SyntaxError String
-    | ValidationError String
-    | CustomError e
+    = Blank -- The empty string or a string containing only whitespace characters
+    | SyntaxError String -- A string that cannot be converted to the desired type, for e.g. "x" isn't an Int
+    | ValidationError String -- A type that isn't in the subset of the type under consideration, for e.g. 1 is an Int but not an even Int
+    | CustomError e -- A more specific type of validation error
 
 
 blankError : Error e
