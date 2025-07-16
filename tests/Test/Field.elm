@@ -10,6 +10,13 @@ import Test.Lib.Fuzz as Fuzz
 suite : Test
 suite =
     describe "Field"
+        [ primitiveTypesSuite
+        ]
+
+
+primitiveTypesSuite : Test
+primitiveTypesSuite =
+    describe "Primitive Types"
         [ intSuite
         , floatSuite
         ]
