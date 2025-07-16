@@ -9,7 +9,7 @@ project="${project:?}"
 # FUNCTIONS
 
 format () {
-  (cd "$project" && elm-format example src tests "${@:---yes}")
+  (cd "$project" && elm-format examples src tests "${@:---yes}")
 }
 
 preview () {
@@ -21,7 +21,7 @@ test () {
 }
 
 test-example () {
-  (cd "$project/example" && elm-test "$@")
+  (cd "$project/examples" && elm-test "$@")
 }
 
 export -f format preview test test-example
