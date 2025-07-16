@@ -59,10 +59,14 @@ module Field.Advanced exposing
     , mapErrorType
     , mapType
     , mapTypeError
+    , negativeFloat
+    , negativeInt
     , nonBlankString
     , nonEmptyString
     , nonNegativeFloat
     , nonNegativeInt
+    , nonPositiveFloat
+    , nonPositiveInt
     , optional
     , positiveFloat
     , positiveInt
@@ -147,6 +151,16 @@ positiveInt =
     subsetOfInt ((<) 0)
 
 
+nonPositiveInt : Type (Error e) Int
+nonPositiveInt =
+    subsetOfInt ((>=) 0)
+
+
+negativeInt : Type (Error e) Int
+negativeInt =
+    subsetOfInt ((>) 0)
+
+
 subsetOfInt : (Int -> Bool) -> Type (Error e) Int
 subsetOfInt =
     customSubsetOfInt
@@ -212,6 +226,16 @@ nonNegativeFloat =
 positiveFloat : Type (Error e) Float
 positiveFloat =
     subsetOfFloat ((<) 0)
+
+
+nonPositiveFloat : Type (Error e) Float
+nonPositiveFloat =
+    subsetOfFloat ((>=) 0)
+
+
+negativeFloat : Type (Error e) Float
+negativeFloat =
+    subsetOfFloat ((>) 0)
 
 
 subsetOfFloat : (Float -> Bool) -> Type (Error e) Float

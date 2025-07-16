@@ -47,10 +47,14 @@ module Field exposing
     , mapError
     , mapType
     , mapTypeError
+    , negativeFloat
+    , negativeInt
     , nonBlankString
     , nonEmptyString
     , nonNegativeFloat
     , nonNegativeInt
+    , nonPositiveFloat
+    , nonPositiveInt
     , optional
     , positiveFloat
     , positiveInt
@@ -130,6 +134,16 @@ positiveInt =
     F.positiveInt
 
 
+nonPositiveInt : Type Int
+nonPositiveInt =
+    F.nonPositiveInt
+
+
+negativeInt : Type Int
+negativeInt =
+    F.negativeInt
+
+
 subsetOfInt : (Int -> Bool) -> Type Int
 subsetOfInt =
     F.subsetOfInt
@@ -156,6 +170,16 @@ nonNegativeFloat =
 positiveFloat : Type Float
 positiveFloat =
     F.positiveFloat
+
+
+nonPositiveFloat : Type Float
+nonPositiveFloat =
+    F.nonPositiveFloat
+
+
+negativeFloat : Type Float
+negativeFloat =
+    F.negativeFloat
 
 
 subsetOfFloat : (Float -> Bool) -> Type Float

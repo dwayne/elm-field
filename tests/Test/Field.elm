@@ -79,6 +79,40 @@ intSuite =
                         |> F.toResult
                         |> Expect.equal (Err [ F.validationError "-1" ])
             ]
+        , describe "nonPositiveInt"
+            [ test "zero" <|
+                \_ ->
+                    F.fromValue F.nonPositiveInt 0
+                        |> F.toMaybe
+                        |> Expect.equal (Just 0)
+            , test "positive integer" <|
+                \_ ->
+                    F.fromValue F.nonPositiveInt 1
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError "1" ])
+            , test "negative integer" <|
+                \_ ->
+                    F.fromValue F.nonPositiveInt -1
+                        |> F.toMaybe
+                        |> Expect.equal (Just -1)
+            ]
+        , describe "negativeInt"
+            [ test "zero" <|
+                \_ ->
+                    F.fromValue F.negativeInt 0
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError "0" ])
+            , test "positive integer" <|
+                \_ ->
+                    F.fromValue F.negativeInt 1
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError "1" ])
+            , test "negative integer" <|
+                \_ ->
+                    F.fromValue F.negativeInt -1
+                        |> F.toMaybe
+                        |> Expect.equal (Just -1)
+            ]
         ]
 
 
@@ -145,5 +179,39 @@ floatSuite =
                     F.fromValue F.positiveFloat -0.1
                         |> F.toResult
                         |> Expect.equal (Err [ F.validationError "-0.1" ])
+            ]
+        , describe "nonPositiveFloat"
+            [ test "zero" <|
+                \_ ->
+                    F.fromValue F.nonPositiveFloat 0
+                        |> F.toMaybe
+                        |> Expect.equal (Just 0)
+            , test "positive float" <|
+                \_ ->
+                    F.fromValue F.nonPositiveFloat 0.1
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError "0.1" ])
+            , test "negative float" <|
+                \_ ->
+                    F.fromValue F.nonPositiveFloat -0.1
+                        |> F.toMaybe
+                        |> Expect.equal (Just -0.1)
+            ]
+        , describe "negativeFloat"
+            [ test "zero" <|
+                \_ ->
+                    F.fromValue F.negativeFloat 0
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError "0" ])
+            , test "positive float" <|
+                \_ ->
+                    F.fromValue F.negativeFloat 0.1
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError "0.1" ])
+            , test "negative float" <|
+                \_ ->
+                    F.fromValue F.negativeFloat -0.1
+                        |> F.toMaybe
+                        |> Expect.equal (Just -0.1)
             ]
         ]
