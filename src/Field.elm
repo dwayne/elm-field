@@ -17,9 +17,6 @@ module Field exposing
     , char
     , clean
     , customError
-    , customNonBlankString
-    , customNonEmptyString
-    , customString
     , customSubsetOfBool
     , customType
     , defaultBoolToString
@@ -262,6 +259,11 @@ string =
     F.string
 
 
+subsetOfString : (String -> Bool) -> Type String
+subsetOfString =
+    F.subsetOfString
+
+
 nonEmptyString : Type String
 nonEmptyString =
     F.nonEmptyString
@@ -272,11 +274,6 @@ subsetOfNonEmptyString =
     F.subsetOfNonEmptyString
 
 
-customNonEmptyString : (String -> Result Error String) -> Type String
-customNonEmptyString =
-    F.customNonEmptyString F.blankError
-
-
 nonBlankString : Type String
 nonBlankString =
     F.nonBlankString
@@ -285,21 +282,6 @@ nonBlankString =
 subsetOfNonBlankString : (String -> Bool) -> Type String
 subsetOfNonBlankString =
     F.subsetOfNonBlankString
-
-
-customNonBlankString : (String -> Result Error String) -> Type String
-customNonBlankString =
-    F.customNonBlankString F.blankError
-
-
-subsetOfString : (String -> Bool) -> Type String
-subsetOfString =
-    F.subsetOfString
-
-
-customString : (String -> Result Error String) -> Type String
-customString =
-    F.customString
 
 
 

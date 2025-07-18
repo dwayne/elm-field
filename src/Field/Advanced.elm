@@ -496,6 +496,9 @@ customSubsetOfChar errors isGood =
 
 string : Type Never String
 string =
+    --
+    -- Any string you give it is trimmed and returned.
+    --
     customString (String.trim >> Ok)
 
 
@@ -510,6 +513,14 @@ string =
 
 nonEmptyString : Type (Error e) String
 nonEmptyString =
+    --
+    -- Any string you give it is left alone. The only string it doesn't accept is the empty string.
+    --
+    -- If it trimmed the string then the non-empty blank strings
+    -- would coincide with the blank string, which we don't want.
+    --
+    -- This type makes a distinction between empty, non-empty blank strings, and non-blank strings.
+    --
     customNonEmptyString Blank Ok
 
 
@@ -539,7 +550,7 @@ customNonEmptyString blank validate =
                 Err blank
 
             else
-                validate (String.trim s)
+                validate s
         )
 
 

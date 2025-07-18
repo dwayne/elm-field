@@ -22,6 +22,7 @@ primitiveTypesSuite =
         , floatSuite
         , boolSuite
         , charSuite
+        , stringSuite
         ]
 
 
@@ -391,6 +392,116 @@ charSuite =
                         F.fromString (F.subsetOfChar Char.isDigit) s
                             |> F.toResult
                             |> Expect.equal (Err [ F.validationError s ])
+                ]
+            ]
+        ]
+
+
+stringSuite : Test
+stringSuite =
+    describe "String"
+        [ describe "string"
+            [ fuzz Fuzz.string "all strings are accepted and trimmed" <|
+                \s ->
+                    F.fromString F.string s
+                        |> F.toMaybe
+                        |> Expect.equal (Just <| String.trim s)
+            ]
+        , describe "subsetOfString"
+            [ describe "type DELETE to confirm removal of the resource"
+                [ test "DELETE" <|
+                    \_ ->
+                        F.fromString (F.subsetOfString ((==) "DELETE")) "DELETE"
+                            |> F.toMaybe
+                            |> Expect.equal (Just "DELETE")
+                , test "delete" <|
+                    \_ ->
+                        F.fromString (F.subsetOfString ((==) "DELETE")) "delete"
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError "delete" ])
+                , test "the empty string" <|
+                    \_ ->
+                        F.fromString (F.subsetOfString ((==) "DELETE")) ""
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError "" ])
+                , test "a non-empty blank string" <|
+                    \_ ->
+                        F.fromString (F.subsetOfString ((==) "DELETE")) " \t "
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError " \t " ])
+                ]
+            ]
+        , describe "nonEmptyString"
+            [ fuzz (Fuzz.oneOfValues [ " ", "\t", " \t  \t   \t    ", "Hello, world!", " Hi! " ]) "non-empty strings" <|
+                \s ->
+                    F.fromString F.nonEmptyString s
+                        |> F.toMaybe
+                        |> Expect.equal (Just s)
+            , test "the empty string" <|
+                \_ ->
+                    F.fromString F.nonEmptyString ""
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.blankError ])
+            ]
+        , describe "subsetOfNonEmptyString"
+            [ describe "type DELETE to confirm removal of the resource"
+                [ test "DELETE" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonEmptyString ((==) "DELETE")) "DELETE"
+                            |> F.toMaybe
+                            |> Expect.equal (Just "DELETE")
+                , test "delete" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonEmptyString ((==) "DELETE")) "delete"
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError "delete" ])
+                , test "the empty string" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonEmptyString ((==) "DELETE")) ""
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.blankError ])
+                , test "a non-empty blank string" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonEmptyString ((==) "DELETE")) " \t "
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError " \t " ])
+                ]
+            ]
+        , describe "nonBlankString"
+            [ fuzz Fuzz.string "non-blank strings are accepted and trimmed" <|
+                \s ->
+                    if String.isEmpty (String.trim s) then
+                        F.fromString F.nonBlankString s
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.blankError ])
+
+                    else
+                        F.fromString F.nonBlankString s
+                            |> F.toMaybe
+                            |> Expect.equal (Just <| String.trim s)
+            ]
+        , describe "subsetOfNonBlankString"
+            [ describe "type DELETE to confirm removal of the resource"
+                [ test "DELETE" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonBlankString ((==) "DELETE")) "DELETE"
+                            |> F.toMaybe
+                            |> Expect.equal (Just "DELETE")
+                , test "delete" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonBlankString ((==) "DELETE")) "delete"
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError "delete" ])
+                , test "the empty string" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonBlankString ((==) "DELETE")) ""
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.blankError ])
+                , test "a non-empty blank string" <|
+                    \_ ->
+                        F.fromString (F.subsetOfNonBlankString ((==) "DELETE")) " \t "
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.blankError ])
                 ]
             ]
         ]
