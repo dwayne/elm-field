@@ -21,6 +21,7 @@ primitiveTypesSuite =
         [ intSuite
         , floatSuite
         , boolSuite
+        , charSuite
         ]
 
 
@@ -347,5 +348,49 @@ boolSuite =
                     F.fromString F.false s
                         |> F.toMaybe
                         |> Expect.equal (Just False)
+            ]
+        ]
+
+
+charSuite : Test
+charSuite =
+    describe "Char"
+        [ describe "char"
+            [ fuzz Fuzz.char "strings of exactly one character" <|
+                \c ->
+                    F.fromString F.char (String.fromChar c)
+                        |> F.toMaybe
+                        |> Expect.equal (Just c)
+            , fuzz Fuzz.nonSingleCharString "strings of zero, two, or more characters" <|
+                \s ->
+                    F.fromString F.char s
+                        |> F.toResult
+                        |> Expect.equal
+                            (Err
+                                [ if String.isEmpty s then
+                                    F.blankError
+
+                                  else
+                                    F.syntaxError s
+                                ]
+                            )
+            ]
+        , describe "subsetOfChar"
+            [ describe "digits"
+                [ fuzz (Fuzz.oneOfValues [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ]) "digit" <|
+                    \c ->
+                        F.fromString (F.subsetOfChar Char.isDigit) (String.fromChar c)
+                            |> F.toMaybe
+                            |> Expect.equal (Just c)
+                , fuzz (Fuzz.oneOfValues [ '~', '@', 'a', 'A', 'f', ':', ',', ' ', '?' ]) "non-digit" <|
+                    \c ->
+                        let
+                            s =
+                                String.fromChar c
+                        in
+                        F.fromString (F.subsetOfChar Char.isDigit) s
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.validationError s ])
+                ]
             ]
         ]
