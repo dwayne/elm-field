@@ -2,7 +2,6 @@ module Field exposing
     ( CustomBoolOptions
     , Error
     , Field
-    , FieldBool
     , FieldString
     , Type
     , allErrors
@@ -106,10 +105,6 @@ import Validation as V exposing (Validation)
 
 type alias Field a =
     F.Field Error a
-
-
-type alias FieldBool =
-    F.Field Never Bool
 
 
 type alias FieldString =

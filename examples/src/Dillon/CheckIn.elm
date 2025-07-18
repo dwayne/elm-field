@@ -28,7 +28,7 @@ type alias Fields =
     , checkIn : Field Date
     , checkInTime : Field Time
     , checkOut : Field Date
-    , subscribe : F.FieldBool
+    , subscribe : Bool
     }
 
 
@@ -81,7 +81,7 @@ init =
     , checkIn = F.empty Date.fieldType
     , checkInTime = F.empty Time.fieldType
     , checkOut = F.empty Date.fieldType
-    , subscribe = F.fromValue F.bool True
+    , subscribe = True
     }
 
 
@@ -153,7 +153,7 @@ setters =
                     { fields | checkOut = checkOut }
     , setSubscribe =
         \b fields ->
-            { fields | subscribe = F.setFromValue b fields.subscribe }
+            { fields | subscribe = b }
     }
 
 
@@ -163,17 +163,16 @@ setters =
 
 validate : Fields -> Validation Error Output
 validate fields =
-    (\name checkIn checkInTime checkOut subscribe ->
+    (\name checkIn checkInTime checkOut ->
         Output
             name
             (Stay checkIn checkInTime (Date.nights checkIn checkOut))
-            subscribe
+            fields.subscribe
     )
         |> F.get (fields.name |> F.mapError NameError)
         |> F.and (fields.checkIn |> F.mapError CheckInError)
         |> F.and (fields.checkInTime |> F.mapError CheckInTimeError)
         |> F.and (fields.checkOut |> F.mapError CheckOutError)
-        |> F.and (fields.subscribe |> F.mapError never)
 
 
 

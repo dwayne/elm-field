@@ -42,7 +42,6 @@ type alias Model =
     , checkInTracker : InteractionTracker.State
     , checkInTimeTracker : InteractionTracker.State
     , checkOutTracker : InteractionTracker.State
-    , subscribeTracker : InteractionTracker.State
     , timer : Timer
     , isSubmitting : Bool
     , maybeOutput : Maybe CheckIn.Output
@@ -57,7 +56,6 @@ init _ =
       , checkInTracker = InteractionTracker.init
       , checkInTimeTracker = InteractionTracker.init
       , checkOutTracker = InteractionTracker.init
-      , subscribeTracker = InteractionTracker.init
       , timer = Timer.init
       , isSubmitting = False
       , maybeOutput = Nothing
@@ -90,7 +88,6 @@ type Msg
     | InputCheckOut String
     | ChangedCheckOutTracker (InteractionTracker.Msg Msg)
     | ToggleSubscribe
-    | ChangedSubscribeTracker (InteractionTracker.Msg Msg)
     | Submit
     | ExpiredTimer
     | ChangedTimer Timer.Msg
@@ -164,24 +161,9 @@ update msg model =
             let
                 { subscribe } =
                     Form.toFields model.checkIn
-
-                b =
-                    subscribe
-                        |> F.toMaybe
-                        |> Maybe.map not
-                        |> Maybe.withDefault False
             in
-            ( { model | checkIn = Form.update .setSubscribe b model.checkIn }
+            ( { model | checkIn = Form.update .setSubscribe (not subscribe) model.checkIn }
             , Cmd.none
-            )
-
-        ChangedSubscribeTracker subMsg ->
-            let
-                ( subscribeTracker, cmd ) =
-                    InteractionTracker.update subMsg model.subscribeTracker
-            in
-            ( { model | subscribeTracker = subscribeTracker }
-            , cmd
             )
 
         Submit ->
@@ -218,7 +200,7 @@ update msg model =
 
 
 view : Model -> H.Html Msg
-view { today, checkIn, nameTracker, checkInTracker, checkInTimeTracker, checkOutTracker, subscribeTracker, timer, isSubmitting, maybeOutput } =
+view { today, checkIn, nameTracker, checkInTracker, checkInTimeTracker, checkOutTracker, timer, isSubmitting, maybeOutput } =
     let
         fields =
             Form.toFields checkIn
@@ -306,13 +288,9 @@ view { today, checkIn, nameTracker, checkInTracker, checkInTimeTracker, checkOut
             , viewCheckbox
                 { id = "subscribe"
                 , label = "Sign Up for Email Updates"
-                , field = fields.subscribe
-                , tracker = subscribeTracker
-                , isRequired = True
+                , checked = fields.subscribe
                 , isDisabled = isSubmitting
-                , attrs = []
                 , onToggle = ToggleSubscribe
-                , onChange = ChangedSubscribeTracker
                 }
             , H.p []
                 [ H.button
@@ -408,32 +386,24 @@ toFieldInput { isRequired, isDisabled, onInput, attrs } { id, field, focus, inpu
 viewCheckbox :
     { id : String
     , label : String
-    , field : F.FieldBool
-    , tracker : InteractionTracker.State
-    , isRequired : Bool
+    , checked : Bool
     , isDisabled : Bool
-    , attrs : List (H.Attribute msg)
     , onToggle : msg
-    , onChange : InteractionTracker.Msg msg -> msg
     }
     -> H.Html msg
-viewCheckbox { id, label, field, tracker, isRequired, isDisabled, attrs, onToggle, onChange } =
-    let
-        checked =
-            field
-                |> F.toMaybe
-                |> Maybe.withDefault False
-    in
-    viewInteractiveInput
-        { id = id
-        , label = label
-        , type_ = "checkbox"
-        , field = F.mapError never field
-        , tracker = tracker
-        , errorToString = always "An unexpected error occurred."
-        , isRequired = isRequired
-        , isDisabled = isDisabled
-        , attrs = attrs ++ [ HA.checked checked ]
-        , onInput = always onToggle
-        , onChange = onChange
-        }
+viewCheckbox { id, label, checked, isDisabled, onToggle } =
+    H.p []
+        [ H.label [ HA.for id ] [ H.text (label ++ ": ") ]
+        , H.text " "
+        , H.input
+            [ HA.id id
+            , HA.type_ "checkbox"
+            , HA.checked checked
+            , if isDisabled then
+                HA.disabled True
+
+              else
+                HE.onInput (always onToggle)
+            ]
+            []
+        ]
