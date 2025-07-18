@@ -14,7 +14,7 @@
   "shell": {
     "init_hook": [
       ". $project/init.sh",
-      "cd example && pnpm install --silent"
+      "cd examples && pnpm install --silent"
     ]
   }
 }

@@ -440,6 +440,10 @@ customBool errors options validate =
     }
 
 
+
+-- TYPE: CHAR
+
+
 char : Type (Error e) Char
 char =
     subsetOfChar (always True)
@@ -486,47 +490,8 @@ customSubsetOfChar errors isGood =
     }
 
 
-optional : Type (Error e) a -> Type (Error e) (Maybe a)
-optional =
-    --
-    -- I don't think it would be wise to use optional with string fields.
-    --
-    customOptional ((==) Blank)
 
-
-customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
-customOptional isBlankError tipe =
-    { fromString =
-        \s ->
-            case tipe.fromString s of
-                Ok value ->
-                    Ok (Just value)
-
-                Err err ->
-                    if isBlankError err then
-                        Ok Nothing
-
-                    else
-                        Err err
-    , fromValue =
-        \maybeValue ->
-            case maybeValue of
-                Just v1 ->
-                    case tipe.fromValue v1 of
-                        Ok v2 ->
-                            Ok (Just v2)
-
-                        Err err ->
-                            if isBlankError err then
-                                Ok Nothing
-
-                            else
-                                Err err
-
-                Nothing ->
-                    Ok Nothing
-    , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
-    }
+-- TYPE: STRING
 
 
 string : Type Never String
@@ -638,6 +603,10 @@ customString validate =
     }
 
 
+
+-- TYPE: ANY
+
+
 subsetOfType : (a -> Bool) -> Type (Error e) a -> Type (Error e) a
 subsetOfType isGood tipe =
     customSubsetOfType (ValidationError << tipe.toString) isGood tipe
@@ -671,22 +640,47 @@ customType options =
     }
 
 
-trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
-trim =
-    customTrim Blank
+optional : Type (Error e) a -> Type (Error e) (Maybe a)
+optional =
+    --
+    -- I don't think it would be wise to use optional with string fields.
+    --
+    customOptional ((==) Blank)
 
 
-customTrim : e -> (String -> Result e a) -> String -> Result e a
-customTrim blank f s =
-    let
-        t =
-            String.trim s
-    in
-    if String.isEmpty t then
-        Err blank
+customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
+customOptional isBlankError tipe =
+    { fromString =
+        \s ->
+            case tipe.fromString s of
+                Ok value ->
+                    Ok (Just value)
 
-    else
-        f t
+                Err err ->
+                    if isBlankError err then
+                        Ok Nothing
+
+                    else
+                        Err err
+    , fromValue =
+        \maybeValue ->
+            case maybeValue of
+                Just v1 ->
+                    case tipe.fromValue v1 of
+                        Ok v2 ->
+                            Ok (Just v2)
+
+                        Err err ->
+                            if isBlankError err then
+                                Ok Nothing
+
+                            else
+                                Err err
+
+                Nothing ->
+                    Ok Nothing
+    , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
+    }
 
 
 mapType : (a -> b) -> (b -> a) -> Type e a -> Type e b
@@ -707,6 +701,28 @@ mapTypeError f tipe =
     , fromValue = tipe.fromValue >> Result.mapError f
     , toString = tipe.toString
     }
+
+
+
+-- HELPERS
+
+
+trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
+trim =
+    customTrim Blank
+
+
+customTrim : e -> (String -> Result e a) -> String -> Result e a
+customTrim blank f s =
+    let
+        t =
+            String.trim s
+    in
+    if String.isEmpty t then
+        Err blank
+
+    else
+        f t
 
 
 

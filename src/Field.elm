@@ -244,6 +244,10 @@ customSubsetOfBool =
         }
 
 
+
+-- TYPE: CHAR
+
+
 char : Type Char
 char =
     F.char
@@ -254,9 +258,8 @@ subsetOfChar =
     F.subsetOfChar
 
 
-optional : Type a -> Type (Maybe a)
-optional =
-    F.optional
+
+-- TYPE: STRING
 
 
 string : F.Type Never String
@@ -304,6 +307,10 @@ customString =
     F.customString
 
 
+
+-- TYPE: ANY
+
+
 subsetOfType : (a -> Bool) -> Type a -> Type a
 subsetOfType =
     F.subsetOfType
@@ -318,9 +325,9 @@ customType =
     F.customType
 
 
-trim : (String -> Result Error a) -> String -> Result Error a
-trim =
-    F.trim
+optional : Type a -> Type (Maybe a)
+optional =
+    F.optional
 
 
 mapType : (a -> b) -> (b -> a) -> Type a -> Type b
@@ -331,6 +338,15 @@ mapType =
 mapTypeError : (x -> y) -> F.Type x a -> F.Type y a
 mapTypeError =
     F.mapTypeError
+
+
+
+-- HELPERS
+
+
+trim : (String -> Result Error a) -> String -> Result Error a
+trim =
+    F.trim
 
 
 
