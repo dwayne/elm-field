@@ -288,11 +288,6 @@ subsetOfNonBlankString =
 -- TYPE: ANY
 
 
-subsetOfType : (a -> Bool) -> Type a -> Type a
-subsetOfType =
-    F.subsetOfType
-
-
 customType :
     { fromString : String -> Result Error a
     , toString : a -> String
@@ -300,6 +295,14 @@ customType :
     -> Type a
 customType =
     F.customType
+
+
+subsetOfType : (a -> Bool) -> Type a -> Type a
+subsetOfType =
+    F.subsetOfType
+
+
+-- TYPE OPERATIONS
 
 
 optional : Type a -> Type (Maybe a)
