@@ -20,11 +20,11 @@ test () {
   (cd "$project" && elm-test "$@")
 }
 
-test-example () {
+test-examples () {
   (cd "$project/examples" && elm-test "$@")
 }
 
-export -f format preview test test-example
+export -f format preview test test-examples
 
 # ALIASES
 

@@ -22,4 +22,4 @@ fail () {
 
 run format --validate
 run test
-run test-example
+run test-examples
