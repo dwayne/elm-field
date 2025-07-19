@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "dwayne/elm-field",
-    "summary": "A data structure for types that can be created from strings",
+    "summary": "Construct valid data from unreliable string inputs",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
