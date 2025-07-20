@@ -45,7 +45,6 @@ module Field exposing
     , isValid
     , lastError
     , mapError
-    , mapType
     , mapTypeError
     , negativeFloat
     , negativeInt
@@ -297,17 +296,12 @@ customType =
 
 
 
--- TYPE OPERATIONS
+-- TYPE: OPERATIONS
 
 
 optional : Type a -> Type (Maybe a)
 optional =
     F.optional
-
-
-mapType : (a -> b) -> (b -> a) -> Type a -> Type b
-mapType =
-    F.mapType
 
 
 mapTypeError : (x -> y) -> F.Type x a -> F.Type y a

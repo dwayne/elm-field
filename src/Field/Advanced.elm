@@ -61,7 +61,6 @@ module Field.Advanced exposing
     , lastError
     , mapError
     , mapErrorType
-    , mapType
     , mapTypeError
     , negativeFloat
     , negativeInt
@@ -629,7 +628,7 @@ customType options =
 
 
 
--- TYPE OPERATIONS
+-- TYPE: OPERATIONS
 
 
 optional : Type (Error e) a -> Type (Error e) (Maybe a)
@@ -672,18 +671,6 @@ customOptional isBlankError tipe =
                 Nothing ->
                     Ok Nothing
     , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
-    }
-
-
-mapType : (a -> b) -> (b -> a) -> Type e a -> Type e b
-mapType f invF tipe =
-    --
-    -- f >> invF = identity : a -> a
-    -- invF >> f = identity : b -> b
-    --
-    { fromString = tipe.fromString >> Result.map f
-    , fromValue = invF >> tipe.fromValue >> Result.map f
-    , toString = invF >> tipe.toString
     }
 
 
