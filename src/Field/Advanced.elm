@@ -628,7 +628,7 @@ customType options =
 
 
 
--- TYPE: OPERATIONS
+-- TYPE: OPTIONAL
 
 
 optional : Type (Error e) a -> Type (Error e) (Maybe a)
@@ -672,6 +672,10 @@ customOptional isBlankError tipe =
                     Ok Nothing
     , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
     }
+
+
+
+-- TYPE: MAP
 
 
 mapTypeError : (x -> y) -> Type x a -> Type y a

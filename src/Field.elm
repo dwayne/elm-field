@@ -296,12 +296,16 @@ customType =
 
 
 
--- TYPE: OPERATIONS
+-- TYPE: OPTIONAL
 
 
 optional : Type a -> Type (Maybe a)
 optional =
     F.optional
+
+
+
+-- TYPE: MAP
 
 
 mapTypeError : (x -> y) -> F.Type x a -> F.Type y a
