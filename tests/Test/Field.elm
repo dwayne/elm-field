@@ -5,6 +5,7 @@ import Field as F exposing (defaultCustomBoolOptions)
 import Fuzz exposing (Fuzzer)
 import Set
 import Test exposing (Test, describe, fuzz, test)
+import Test.Fixtures.Username as Username
 import Test.Lib.Fuzz as Fuzz
 
 
@@ -12,6 +13,7 @@ suite : Test
 suite =
     describe "Field"
         [ primitiveTypesSuite
+        , userDefinedTypesSuite
         ]
 
 
@@ -503,5 +505,37 @@ stringSuite =
                             |> F.toResult
                             |> Expect.equal (Err [ F.blankError ])
                 ]
+            ]
+        ]
+
+
+userDefinedTypesSuite : Test
+userDefinedTypesSuite =
+    describe "User-defined"
+        [ describe "Example: Username"
+            [ test "it is required" <|
+                \_ ->
+                    F.fromString Username.fieldType ""
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.blankError ])
+            , fuzz (Fuzz.asciiStringOfLengthBetween 1 4) "it must be at least 5 characters long" <|
+                \s ->
+                    F.fromString Username.fieldType s
+                        |> F.toResult
+                        |> Expect.equal
+                            (Err
+                                [ if String.isEmpty (String.trim s) then
+                                    F.blankError
+
+                                  else
+                                    F.validationError "Too short"
+                                ]
+                            )
+            , fuzz (Fuzz.oneOfValues [ "abcde", "abcdef", "abcdefg" ]) "valid usernames" <|
+                \s ->
+                    F.fromString Username.fieldType s
+                        |> F.toResult
+                        |> Result.map Username.toString
+                        |> Expect.equal (Ok s)
             ]
         ]

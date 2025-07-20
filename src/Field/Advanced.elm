@@ -32,7 +32,6 @@ module Field.Advanced exposing
     , customSubsetOfNonBlankString
     , customSubsetOfNonEmptyString
     , customSubsetOfString
-    , customSubsetOfType
     , customTrim
     , customType
     , defaultBoolToString
@@ -90,7 +89,6 @@ module Field.Advanced exposing
     , subsetOfNonBlankString
     , subsetOfNonEmptyString
     , subsetOfString
-    , subsetOfType
     , syntaxError
     , toMaybe
     , toRawString
@@ -615,28 +613,7 @@ customString validate =
 
 
 
--- TYPE: ANY
-
-
-subsetOfType : (a -> Bool) -> Type (Error e) a -> Type (Error e) a
-subsetOfType isGood tipe =
-    customSubsetOfType (ValidationError << tipe.toString) isGood tipe
-
-
-customSubsetOfType : (a -> e) -> (a -> Bool) -> Type e a -> Type e a
-customSubsetOfType toValidationError isGood tipe =
-    let
-        validate value =
-            if isGood value then
-                Ok value
-
-            else
-                Err (toValidationError value)
-    in
-    { fromString = tipe.fromString >> Result.andThen validate
-    , fromValue = tipe.fromValue >> Result.andThen validate
-    , toString = tipe.toString
-    }
+-- TYPE: USER-DEFINED
 
 
 customType :
@@ -649,6 +626,10 @@ customType options =
     , fromValue = Ok
     , toString = options.toString
     }
+
+
+
+-- TYPE OPERATIONS
 
 
 optional : Type (Error e) a -> Type (Error e) (Maybe a)

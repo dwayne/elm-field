@@ -72,7 +72,6 @@ module Field exposing
     , subsetOfNonBlankString
     , subsetOfNonEmptyString
     , subsetOfString
-    , subsetOfType
     , syntaxError
     , toMaybe
     , toRawString
@@ -285,7 +284,7 @@ subsetOfNonBlankString =
 
 
 
--- TYPE: ANY
+-- TYPE: USER-DEFINED
 
 
 customType :
@@ -296,10 +295,6 @@ customType :
 customType =
     F.customType
 
-
-subsetOfType : (a -> Bool) -> Type a -> Type a
-subsetOfType =
-    F.subsetOfType
 
 
 -- TYPE OPERATIONS
