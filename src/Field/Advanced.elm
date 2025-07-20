@@ -714,6 +714,10 @@ customTrim blank f s =
 
 type Error e
     = Blank -- The empty string or a string containing only whitespace characters
+      --
+      -- The string in the SyntaxError and the ValidationError should always be the string that caused the error.
+      -- It should NEVER be a description of the error. CustomError is used for detail.
+      --
     | SyntaxError String -- A string that cannot be converted to the desired type, for e.g. "x" isn't an Int
     | ValidationError String -- A type that isn't in the subset of the type under consideration, for e.g. 1 is an Int but not an even Int
     | CustomError e -- A more specific type of validation error
