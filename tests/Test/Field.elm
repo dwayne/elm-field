@@ -529,7 +529,7 @@ userDefinedTypesSuite =
                                     F.blankError
 
                                   else
-                                    F.validationError "Too short"
+                                    F.customError "Too short"
                                 ]
                             )
             , fuzz (Fuzz.oneOfValues [ "abcde", "abcdef", "abcdefg" ]) "valid usernames" <|

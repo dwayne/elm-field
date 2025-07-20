@@ -17,7 +17,7 @@ fromString =
     F.trim
         (\s ->
             if String.length s < 5 then
-                Err <| F.validationError "Too short"
+                Err <| F.customError "Too short"
 
             else
                 Ok <| Username s
