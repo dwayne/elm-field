@@ -14,6 +14,7 @@ suite =
     describe "Field"
         [ primitiveTypesSuite
         , userDefinedTypesSuite
+        , optionalSuite
         ]
 
 
@@ -537,5 +538,36 @@ userDefinedTypesSuite =
                         |> F.toResult
                         |> Result.map Username.toString
                         |> Expect.equal (Ok s)
+            ]
+        ]
+
+
+optionalSuite : Test
+optionalSuite =
+    describe "optional"
+        [ describe "Example: Optional positive integer" <|
+            let
+                optionalPositiveInteger =
+                    F.optional F.positiveInt
+            in
+            [ test "it is not required" <|
+                \_ ->
+                    F.fromString optionalPositiveInteger ""
+                        |> F.toMaybe
+                        |> Expect.equal (Just Nothing)
+            , fuzz (Fuzz.intAtMost 0) "non-positive integers" <|
+                \n ->
+                    let
+                        s =
+                            String.fromInt n
+                    in
+                    F.fromString optionalPositiveInteger s
+                        |> F.toResult
+                        |> Expect.equal (Err [ F.validationError s ])
+            , fuzz (Fuzz.intAtLeast 1) "positive integers" <|
+                \n ->
+                    F.fromString optionalPositiveInteger (String.fromInt n)
+                        |> F.toMaybe
+                        |> Expect.equal (Just (Just n))
             ]
         ]
