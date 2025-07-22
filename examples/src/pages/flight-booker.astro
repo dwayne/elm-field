@@ -2,7 +2,11 @@
 <script>
   import { Elm } from "../FlightBooker/Main.elm";
 
-  Elm.FlightBooker.Main.init({
+  const app = Elm.FlightBooker.Main.init({
     node: document.getElementById("FlightBooker.Main")
+  });
+
+  app.ports.alert.subscribe((message: String) => {
+    window.alert(message);
   });
 </script>

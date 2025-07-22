@@ -5,6 +5,7 @@ import Field as F exposing (Error, Field)
 import FlightBooker.Date as Date exposing (Date)
 import FlightBooker.Flight as Flight exposing (Flight)
 import FlightBooker.Form as FlightBooker
+import FlightBooker.Port as Port
 import Html as H
 import Html.Attributes as HA
 import Html.Events as HE
@@ -109,13 +110,28 @@ update msg model =
             )
 
         ExpiredTimer ->
+            let
+                maybeTicket =
+                    Form.validateAsMaybe model.flightBooker
+            in
             ( { model
                 | flightBooker = FlightBooker.form model.today
                 , timer = Timer.init
                 , isSubmitting = False
-                , maybeTicket = Form.validateAsMaybe model.flightBooker
+                , maybeTicket = maybeTicket
               }
-            , Cmd.none
+            , case maybeTicket of
+                Just ticket ->
+                    Port.alert <|
+                        case ticket of
+                            FlightBooker.OneWay departure ->
+                                "You have booked a one-way flight for " ++ Date.toString departure ++ "."
+
+                            FlightBooker.Return { departure, return } ->
+                                "You have booked a return flight from " ++ Date.toString departure ++ " to " ++ Date.toString return ++ "."
+
+                Nothing ->
+                    Cmd.none
             )
 
         ChangedTimer subMsg ->
