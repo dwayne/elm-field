@@ -5,6 +5,7 @@ module Field.Advanced exposing
     , Raw(..)
     , State
     , Type
+    , Validation
     , allErrors
     , and
     , andFinally
@@ -107,7 +108,7 @@ module Field.Advanced exposing
     )
 
 import Set exposing (Set)
-import Validation as V exposing (Validation)
+import Validation as V
 
 
 
@@ -127,6 +128,10 @@ type alias State e a =
 type Raw
     = Initial String
     | Dirty String
+
+
+type alias Validation e a =
+    V.Validation e a
 
 
 

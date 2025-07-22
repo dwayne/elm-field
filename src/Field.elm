@@ -4,6 +4,7 @@ module Field exposing
     , Field
     , FieldString
     , Type
+    , Validation
     , allErrors
     , and
     , andFinally
@@ -91,7 +92,7 @@ module Field exposing
 
 import Field.Advanced as F
 import Set exposing (Set)
-import Validation as V exposing (Validation)
+import Validation as V
 
 
 
@@ -104,6 +105,10 @@ type alias Field a =
 
 type alias FieldString =
     F.Field Never String
+
+
+type alias Validation e a =
+    V.Validation e a
 
 
 

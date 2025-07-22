@@ -7,11 +7,10 @@ module FlightBooker.Form exposing
     , form
     )
 
-import Field as F exposing (Field)
+import Field as F exposing (Field, Validation)
 import FlightBooker.Date as Date exposing (Date)
 import FlightBooker.Flight as Flight exposing (Flight)
 import Lib.Form as Form
-import Validation as V exposing (Validation)
 
 
 
@@ -25,7 +24,7 @@ type alias Form =
 type alias Fields =
     { flight : Flight
     , departure : Field Date
-    , maybeReturn : Maybe (Field Date)
+    , return : Field Date
     }
 
 
@@ -66,7 +65,7 @@ init : Date -> Fields
 init today =
     { flight = Flight.OneWay
     , departure = F.fromValue Date.fieldType today
-    , maybeReturn = Nothing
+    , return = F.empty Date.fieldType
     }
 
 
@@ -79,24 +78,24 @@ setters =
     { setFlight =
         \{ today, flight } fields ->
             let
-                maybeReturn =
+                return =
                     case flight of
                         Flight.OneWay ->
-                            fields.maybeReturn
+                            fields.return
 
                         Flight.Return ->
-                            if fields.maybeReturn == Nothing then
+                            if F.isClean fields.return then
                                 case F.toMaybe fields.departure of
                                     Just departure ->
-                                        Just <| F.fromValue Date.fieldType departure
+                                        F.setFromValue departure fields.return
 
                                     Nothing ->
-                                        Just <| F.fromValue Date.fieldType today
+                                        F.setFromValue today fields.return
 
                             else
-                                fields.maybeReturn
+                                fields.return
             in
-            { fields | flight = flight, maybeReturn = maybeReturn }
+            { fields | flight = flight, return = return }
     , setDeparture =
         \s fields ->
             let
@@ -111,27 +110,17 @@ setters =
                     newFields
 
                 Flight.Return ->
-                    case fields.maybeReturn of
-                        Nothing ->
-                            newFields
-
-                        Just return ->
-                            updateReturn return departure newFields
+                    updateReturn fields.return departure newFields
     , setReturn =
         \s fields ->
-            case fields.maybeReturn of
-                Nothing ->
-                    fields
+            let
+                return =
+                    F.setFromString s fields.return
 
-                Just return ->
-                    let
-                        newReturn =
-                            F.setFromString s return
-
-                        newFields =
-                            { fields | maybeReturn = Just newReturn }
-                    in
-                    updateReturn newReturn fields.departure newFields
+                newFields =
+                    { fields | return = return }
+            in
+            updateReturn return fields.departure newFields
     }
 
 
@@ -144,11 +133,10 @@ updateReturn return departure fields =
 
             else
                 { fields
-                    | maybeReturn =
+                    | return =
                         return
                             |> F.setCustomError "The return date must be on or after the departure date."
                             |> F.dirty
-                            |> Just
                 }
 
         _ ->
@@ -163,25 +151,15 @@ validate : Fields -> Validation Error Ticket
 validate fields =
     case fields.flight of
         Flight.OneWay ->
-            fields.departure
-                |> F.toValidation
-                |> V.mapError DepartureError
-                |> V.map OneWay
+            OneWay
+                |> F.get (fields.departure |> F.mapError DepartureError)
 
         Flight.Return ->
-            case fields.maybeReturn of
-                Nothing ->
-                    --
-                    -- This should NEVER happen.
-                    --
-                    V.fail (ReturnError <| F.customError "The return date is missing.")
-
-                Just returnField ->
-                    (\departure return ->
-                        Return
-                            { departure = departure
-                            , return = return
-                            }
-                    )
-                        |> F.get (fields.departure |> F.mapError DepartureError)
-                        |> F.and (returnField |> F.mapError ReturnError)
+            (\departure return ->
+                Return
+                    { departure = departure
+                    , return = return
+                    }
+            )
+                |> F.get (fields.departure |> F.mapError DepartureError)
+                |> F.and (fields.return |> F.mapError ReturnError)

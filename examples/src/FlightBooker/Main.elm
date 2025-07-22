@@ -171,27 +171,14 @@ view { today, flightBooker, timer, isSubmitting, maybeTicket } =
                 , attrs = []
                 , onInput = InputDeparture
                 }
-            , let
-                ( field, isDisabled ) =
-                    case fields.maybeReturn of
-                        Nothing ->
-                            ( F.fromValue Date.fieldType today
-                            , True
-                            )
-
-                        Just return ->
-                            ( return
-                            , fields.flight == Flight.OneWay
-                            )
-              in
-              viewInput
+            , viewInput
                 { id = "return"
                 , label = "Return date (format: DD.MM.YYYY)"
                 , type_ = "text"
-                , field = field
+                , field = fields.return
                 , errorToString = Date.errorToString "return"
                 , isRequired = True
-                , isDisabled = isDisabled
+                , isDisabled = fields.flight == Flight.OneWay
                 , attrs = []
                 , onInput = InputReturn
                 }
