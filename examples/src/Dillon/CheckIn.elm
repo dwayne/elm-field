@@ -106,10 +106,21 @@ setters =
             case F.toMaybe checkIn of
                 Just date ->
                     if date |> Date.isAfter today then
-                        { fields | checkIn = checkIn }
+                        let
+                            maybeCheckOutIsAfterCheckIn =
+                                fields.checkOut
+                                    |> F.toMaybe
+                                    |> Maybe.map (Date.isAfter date)
+                        in
+                        case maybeCheckOutIsAfterCheckIn of
+                            Just False ->
+                                { fields | checkIn = checkIn, checkOut = F.setCustomError "You must check out after you've checked in." fields.checkOut }
+
+                            _ ->
+                                { fields | checkIn = checkIn }
 
                     else
-                        { fields | checkIn = F.setCustomError "You must check in after today." checkIn }
+                        { fields | checkIn = F.setCustomError "You must check-in after today." checkIn }
 
                 Nothing ->
                     { fields | checkIn = checkIn }
@@ -125,7 +136,7 @@ setters =
                         { fields | checkInTime = checkInTime }
 
                     else
-                        { fields | checkInTime = F.setCustomError "You must check in between the hours of 9am to 5pm." checkInTime }
+                        { fields | checkInTime = F.setCustomError "You must check-in between the hours of 9am to 5pm." checkInTime }
 
                 Nothing ->
                     { fields | checkInTime = checkInTime }
@@ -142,14 +153,10 @@ setters =
                         |> F.andMaybe
             in
             case maybeCheckOutIsAfterCheckIn of
-                Just checkOutIsAfterCheckIn ->
-                    if checkOutIsAfterCheckIn then
-                        { fields | checkOut = checkOut }
+                Just False ->
+                    { fields | checkOut = F.setCustomError "You must check out after you've checked in." checkOut }
 
-                    else
-                        { fields | checkOut = F.setCustomError "You must check out after you've checked in." checkOut }
-
-                Nothing ->
+                _ ->
                     { fields | checkOut = checkOut }
     , setSubscribe =
         \b fields ->
