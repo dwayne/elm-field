@@ -23,6 +23,9 @@ type Date
 
 default : Date
 default =
+    --
+    -- July 1st, 2025
+    --
     Date (Date.fromRataDie 739433)
 
 
