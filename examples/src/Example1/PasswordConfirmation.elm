@@ -15,6 +15,9 @@ type PasswordConfirmation
 
 fromString : String -> Result Error PasswordConfirmation
 fromString =
+    --
+    -- Notice how I reuse fromString from the nonBlankString type.
+    --
     F.nonBlankString.fromString >> Result.map PasswordConfirmation
 
 
