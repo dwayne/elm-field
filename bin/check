@@ -22,4 +22,5 @@ fail () {
 
 run format --validate
 run test
+run lint-examples
 run test-examples

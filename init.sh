@@ -20,11 +20,15 @@ test () {
   (cd "$project" && elm-test "$@")
 }
 
+lint-examples () {
+  (cd "$project/examples" && elm-test make src)
+}
+
 test-examples () {
   (cd "$project/examples" && elm-test "$@")
 }
 
-export -f format preview test test-examples
+export -f format preview test lint-examples test-examples
 
 # ALIASES
 
