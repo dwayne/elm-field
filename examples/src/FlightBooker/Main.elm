@@ -57,7 +57,7 @@ init _ =
 timerConfig : Timer.Config Msg
 timerConfig =
     Timer.config
-        { wait = 5000
+        { wait = 1000
         , onExpire = ExpiredTimer
         , onChange = ChangedTimer
         }

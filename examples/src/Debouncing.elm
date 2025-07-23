@@ -167,7 +167,7 @@ usernameDebouncedInputConfig =
 timerConfig : Timer.Config Msg
 timerConfig =
     Timer.config
-        { wait = 5000
+        { wait = 1000
         , onExpire = TimerExpired
         , onChange = ChangedTimer
         }
@@ -185,13 +185,7 @@ view model =
             { field = model.username
             , debouncedInput = model.usernameDebouncedInput
             , isRequired = True
-            , isDisabled =
-                case model.status of
-                    Checking _ ->
-                        True
-
-                    _ ->
-                        False
+            , isDisabled = False
             , config = usernameDebouncedInputConfig
             , attrs =
                 [ HA.autofocus True
