@@ -1,111 +1,150 @@
 module Field.Advanced exposing
-    ( CustomBoolOptions
-    , Error
-    , Field
-    , Raw(..)
-    , State
+    ( Field
+    , State, Raw(..), Validation
     , Type
-    , Validation
-    , allErrors
-    , and
-    , andFinally
-    , andMaybe
-    , andResult
-    , appendError
-    , applyMaybe
-    , applyResult
-    , blankError
-    , bool
-    , char
-    , clean
-    , customBool
-    , customError
-    , customFloat
-    , customInt
-    , customNonBlankString
-    , customNonEmptyString
-    , customOptional
-    , customString
-    , customSubsetOfBool
-    , customSubsetOfChar
-    , customSubsetOfFloat
-    , customSubsetOfInt
-    , customSubsetOfNonBlankString
-    , customSubsetOfNonEmptyString
-    , customSubsetOfString
-    , customTrim
+    , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt, customInt
+    , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
+    , bool, true, false, subsetOfBool, customSubsetOfBool, customBool
+    , CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
+    , char, subsetOfChar, customSubsetOfChar
+    , string, subsetOfString, customSubsetOfString, customString
+    , nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString, customNonEmptyString
+    , nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString, customNonBlankString
     , customType
-    , defaultBoolToString
-    , defaultCustomBoolOptions
-    , defaultFalsy
-    , defaultTruthy
-    , dirty
-    , empty
+    , optional, customOptional
+    , empty, fromString, fromValue
+    , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
+    , clean, dirty
+    , isEmpty, isNonEmpty
+    , isBlank, isNonBlank
+    , isClean, isDirty
+    , isValid, isInvalid
+    , toRawString, toString, toMaybe, toResult, toValidation, toType, toState
+    , applyMaybe, applyResult
+    , validate2, validate3, validate4, validate5
+    , get, and
+    , withDefault, andMaybe, andResult, andFinally
+    , trim, customTrim
+    , Error, blankError, syntaxError, validationError, customError
     , errorToString
-    , fail
-    , failWithErrors
-    , false
-    , firstError
-    , float
-    , fromString
-    , fromValue
-    , get
-    , int
-    , isBlank
-    , isClean
-    , isDirty
-    , isEmpty
-    , isInvalid
-    , isNonBlank
-    , isNonEmpty
-    , isValid
-    , lastError
-    , mapError
     , mapErrorType
     , mapTypeError
-    , negativeFloat
-    , negativeInt
-    , nonBlankString
-    , nonEmptyString
-    , nonNegativeFloat
-    , nonNegativeInt
-    , nonPositiveFloat
-    , nonPositiveInt
-    , optional
-    , positiveFloat
-    , positiveInt
-    , prependError
-    , setCustomError
-    , setCustomErrors
-    , setError
-    , setErrors
-    , setFromString
-    , setFromValue
-    , string
-    , subsetOfBool
-    , subsetOfChar
-    , subsetOfFloat
-    , subsetOfInt
-    , subsetOfNonBlankString
-    , subsetOfNonEmptyString
-    , subsetOfString
-    , syntaxError
-    , toMaybe
-    , toRawString
-    , toResult
-    , toState
-    , toString
-    , toType
-    , toValidation
-    , trim
-    , true
-    , validate2
-    , validate3
-    , validate4
-    , validate5
-    , validationError
-    , withDefault
+    , mapError
+    , fail, failWithErrors
+    , prependError, appendError
+    , firstError, lastError, allErrors
     )
+
+{-|
+
+
+# Field
+
+@docs Field
+@docs State, Raw, Validation
+
+
+# Type
+
+@docs Type
+
+
+# Primitive
+
+
+# Int
+
+@docs int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt, customInt
+
+
+# Float
+
+@docs float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
+
+
+# Bool
+
+@docs bool, true, false, subsetOfBool, customSubsetOfBool, customBool
+@docs CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
+
+
+# Char
+
+@docs char, subsetOfChar, customSubsetOfChar
+
+
+# String
+
+TODO: Explain about empty and blank strings.
+
+@docs string, subsetOfString, customSubsetOfString, customString
+@docs nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString, customNonEmptyString
+@docs nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString, customNonBlankString
+
+
+# User-defined
+
+@docs customType
+
+
+# Optional
+
+@docs optional, customOptional
+
+
+# Construct
+
+@docs empty, fromString, fromValue
+
+
+# Change
+
+@docs setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
+@docs clean, dirty
+
+
+# Query
+
+@docs isEmpty, isNonEmpty
+@docs isBlank, isNonBlank
+@docs isClean, isDirty
+@docs isValid, isInvalid
+
+
+# Convert
+
+@docs toRawString, toString, toMaybe, toResult, toValidation, toType, toState
+
+
+# Applicative
+
+@docs applyMaybe, applyResult
+@docs validate2, validate3, validate4, validate5
+@docs get, and
+@docs withDefault, andMaybe, andResult, andFinally
+
+
+# Helpers
+
+@docs trim, customTrim
+
+
+# Error
+
+@docs Error, blankError, syntaxError, validationError, customError
+@docs errorToString
+@docs mapErrorType
+
+
+# Handle Errors
+
+@docs mapTypeError
+@docs mapError
+@docs fail, failWithErrors
+@docs prependError, appendError
+@docs firstError, lastError, allErrors
+
+-}
 
 import Set exposing (Set)
 import Validation as V
@@ -115,21 +154,25 @@ import Validation as V
 -- FIELD
 
 
+{-| -}
 type Field e a
     = Field (Type e a) (State e a)
 
 
+{-| -}
 type alias State e a =
     { raw : Raw
     , processed : Validation e a
     }
 
 
+{-| -}
 type Raw
     = Initial String
     | Dirty String
 
 
+{-| -}
 type alias Validation e a =
     V.Validation e a
 
@@ -138,6 +181,7 @@ type alias Validation e a =
 -- TYPE
 
 
+{-| -}
 type alias Type e a =
     { fromString : String -> Result e a
     , fromValue : a -> Result e a
@@ -149,31 +193,37 @@ type alias Type e a =
 -- TYPE: INT
 
 
+{-| -}
 int : Type (Error e) Int
 int =
     subsetOfInt (always True)
 
 
+{-| -}
 nonNegativeInt : Type (Error e) Int
 nonNegativeInt =
     subsetOfInt ((<=) 0)
 
 
+{-| -}
 positiveInt : Type (Error e) Int
 positiveInt =
     subsetOfInt ((<) 0)
 
 
+{-| -}
 nonPositiveInt : Type (Error e) Int
 nonPositiveInt =
     subsetOfInt ((>=) 0)
 
 
+{-| -}
 negativeInt : Type (Error e) Int
 negativeInt =
     subsetOfInt ((>) 0)
 
 
+{-| -}
 subsetOfInt : (Int -> Bool) -> Type (Error e) Int
 subsetOfInt =
     customSubsetOfInt
@@ -183,6 +233,7 @@ subsetOfInt =
         }
 
 
+{-| -}
 customSubsetOfInt :
     { blank : e
     , syntaxError : String -> e
@@ -204,6 +255,7 @@ customSubsetOfInt errors isGood =
         )
 
 
+{-| -}
 customInt :
     { blank : e
     , syntaxError : String -> e
@@ -230,31 +282,37 @@ customInt errors validate =
 -- TYPE: FLOAT
 
 
+{-| -}
 float : Type (Error e) Float
 float =
     subsetOfFloat (always True)
 
 
+{-| -}
 nonNegativeFloat : Type (Error e) Float
 nonNegativeFloat =
     subsetOfFloat ((<=) 0)
 
 
+{-| -}
 positiveFloat : Type (Error e) Float
 positiveFloat =
     subsetOfFloat ((<) 0)
 
 
+{-| -}
 nonPositiveFloat : Type (Error e) Float
 nonPositiveFloat =
     subsetOfFloat ((>=) 0)
 
 
+{-| -}
 negativeFloat : Type (Error e) Float
 negativeFloat =
     subsetOfFloat ((>) 0)
 
 
+{-| -}
 subsetOfFloat : (Float -> Bool) -> Type (Error e) Float
 subsetOfFloat =
     customSubsetOfFloat
@@ -264,6 +322,7 @@ subsetOfFloat =
         }
 
 
+{-| -}
 customSubsetOfFloat :
     { blank : e
     , syntaxError : String -> e
@@ -285,6 +344,7 @@ customSubsetOfFloat errors isGood =
         )
 
 
+{-| -}
 customFloat :
     { blank : e
     , syntaxError : String -> e
@@ -311,21 +371,25 @@ customFloat errors validate =
 -- TYPE: BOOL
 
 
+{-| -}
 bool : Type (Error e) Bool
 bool =
     subsetOfBool (always True)
 
 
+{-| -}
 true : Type (Error e) Bool
 true =
     subsetOfBool ((==) True)
 
 
+{-| -}
 false : Type (Error e) Bool
 false =
     subsetOfBool ((==) False)
 
 
+{-| -}
 subsetOfBool : (Bool -> Bool) -> Type (Error e) Bool
 subsetOfBool =
     customSubsetOfBool
@@ -336,6 +400,7 @@ subsetOfBool =
         defaultCustomBoolOptions
 
 
+{-| -}
 type alias CustomBoolOptions =
     { truthy : Set String
     , falsy : Set String
@@ -344,6 +409,7 @@ type alias CustomBoolOptions =
     }
 
 
+{-| -}
 defaultCustomBoolOptions : CustomBoolOptions
 defaultCustomBoolOptions =
     { truthy = defaultTruthy
@@ -353,6 +419,7 @@ defaultCustomBoolOptions =
     }
 
 
+{-| -}
 defaultTruthy : Set String
 defaultTruthy =
     Set.fromList
@@ -365,6 +432,7 @@ defaultTruthy =
         ]
 
 
+{-| -}
 defaultFalsy : Set String
 defaultFalsy =
     Set.fromList
@@ -377,6 +445,7 @@ defaultFalsy =
         ]
 
 
+{-| -}
 defaultBoolToString : Bool -> String
 defaultBoolToString b =
     if b then
@@ -386,6 +455,7 @@ defaultBoolToString b =
         "false"
 
 
+{-| -}
 customSubsetOfBool :
     { blank : e
     , syntaxError : String -> e
@@ -409,6 +479,7 @@ customSubsetOfBool errors options isGood =
         )
 
 
+{-| -}
 customBool :
     { blank : e
     , syntaxError : String -> e
@@ -446,11 +517,13 @@ customBool errors options validate =
 -- TYPE: CHAR
 
 
+{-| -}
 char : Type (Error e) Char
 char =
     subsetOfChar (always True)
 
 
+{-| -}
 subsetOfChar : (Char -> Bool) -> Type (Error e) Char
 subsetOfChar =
     customSubsetOfChar
@@ -460,6 +533,7 @@ subsetOfChar =
         }
 
 
+{-| -}
 customSubsetOfChar :
     { blank : e
     , syntaxError : String -> e
@@ -496,6 +570,7 @@ customSubsetOfChar errors isGood =
 -- TYPE: STRING
 
 
+{-| -}
 string : Type Never String
 string =
     --
@@ -513,6 +588,7 @@ string =
 --
 
 
+{-| -}
 nonEmptyString : Type (Error e) String
 nonEmptyString =
     --
@@ -526,6 +602,7 @@ nonEmptyString =
     customNonEmptyString Blank Ok
 
 
+{-| -}
 subsetOfNonEmptyString : (String -> Bool) -> Type (Error e) String
 subsetOfNonEmptyString =
     customSubsetOfNonEmptyString
@@ -534,6 +611,7 @@ subsetOfNonEmptyString =
         }
 
 
+{-| -}
 customSubsetOfNonEmptyString :
     { blank : e
     , validationError : String -> e
@@ -544,6 +622,7 @@ customSubsetOfNonEmptyString errors =
     customNonEmptyString errors.blank << customValidateStringWith errors.validationError
 
 
+{-| -}
 customNonEmptyString : e -> (String -> Result e String) -> Type e String
 customNonEmptyString blank validate =
     customString
@@ -556,11 +635,13 @@ customNonEmptyString blank validate =
         )
 
 
+{-| -}
 nonBlankString : Type (Error e) String
 nonBlankString =
     customString (trim Ok)
 
 
+{-| -}
 subsetOfNonBlankString : (String -> Bool) -> Type (Error e) String
 subsetOfNonBlankString =
     customSubsetOfNonBlankString
@@ -569,6 +650,7 @@ subsetOfNonBlankString =
         }
 
 
+{-| -}
 customSubsetOfNonBlankString :
     { blank : e
     , validationError : String -> e
@@ -579,16 +661,19 @@ customSubsetOfNonBlankString errors =
     customNonBlankString errors.blank << customValidateStringWith errors.validationError
 
 
+{-| -}
 customNonBlankString : e -> (String -> Result e String) -> Type e String
 customNonBlankString blank validate =
     customString (customTrim blank validate)
 
 
+{-| -}
 subsetOfString : (String -> Bool) -> Type (Error e) String
 subsetOfString =
     customSubsetOfString ValidationError
 
 
+{-| -}
 customSubsetOfString : (String -> e) -> (String -> Bool) -> Type e String
 customSubsetOfString toValidationError =
     customString << customValidateStringWith toValidationError
@@ -608,6 +693,7 @@ customValidateStringWith toValidationError isGood s =
         Err (toValidationError s)
 
 
+{-| -}
 customString : (String -> Result e String) -> Type e String
 customString validate =
     { fromString = validate
@@ -620,6 +706,7 @@ customString validate =
 -- TYPE: USER-DEFINED
 
 
+{-| -}
 customType :
     { fromString : String -> Result e a
     , toString : a -> String
@@ -636,6 +723,7 @@ customType options =
 -- TYPE: OPTIONAL
 
 
+{-| -}
 optional : Type (Error e) a -> Type (Error e) (Maybe a)
 optional =
     --
@@ -644,6 +732,7 @@ optional =
     customOptional ((==) Blank)
 
 
+{-| -}
 customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
 customOptional isBlankError tipe =
     { fromString =
@@ -683,6 +772,7 @@ customOptional isBlankError tipe =
 -- TYPE: MAP
 
 
+{-| -}
 mapTypeError : (x -> y) -> Type x a -> Type y a
 mapTypeError f tipe =
     { fromString = tipe.fromString >> Result.mapError f
@@ -695,11 +785,13 @@ mapTypeError f tipe =
 -- HELPERS
 
 
+{-| -}
 trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
 trim =
     customTrim Blank
 
 
+{-| -}
 customTrim : e -> (String -> Result e a) -> String -> Result e a
 customTrim blank f s =
     let
@@ -717,6 +809,7 @@ customTrim blank f s =
 -- ERROR
 
 
+{-| -}
 type Error e
     = Blank -- The empty string or a string containing only whitespace characters
       --
@@ -728,26 +821,31 @@ type Error e
     | CustomError e -- A more specific type of validation error
 
 
+{-| -}
 blankError : Error e
 blankError =
     Blank
 
 
+{-| -}
 syntaxError : String -> Error e
 syntaxError =
     SyntaxError
 
 
+{-| -}
 validationError : String -> Error e
 validationError =
     ValidationError
 
 
+{-| -}
 customError : e -> Error e
 customError =
     CustomError
 
 
+{-| -}
 errorToString :
     { onBlank : String
     , onSyntaxError : String -> String
@@ -771,6 +869,7 @@ errorToString { onBlank, onSyntaxError, onValidationError, onCustomError } error
             onCustomError e
 
 
+{-| -}
 mapErrorType : (x -> y) -> Error x -> Error y
 mapErrorType f error =
     case error of
@@ -791,11 +890,13 @@ mapErrorType f error =
 -- CONSTRUCT
 
 
+{-| -}
 empty : Type e a -> Field e a
 empty tipe =
     fromString tipe ""
 
 
+{-| -}
 fromString : Type e a -> String -> Field e a
 fromString tipe s =
     Field
@@ -805,6 +906,7 @@ fromString tipe s =
         }
 
 
+{-| -}
 fromValue : Type e a -> a -> Field e a
 fromValue tipe value =
     Field
@@ -818,6 +920,7 @@ fromValue tipe value =
 -- CHANGE
 
 
+{-| -}
 setFromString : String -> Field e a -> Field e a
 setFromString s (Field tipe state) =
     Field
@@ -827,6 +930,7 @@ setFromString s (Field tipe state) =
         }
 
 
+{-| -}
 setFromValue : a -> Field e a -> Field e a
 setFromValue value (Field tipe state) =
     Field
@@ -836,26 +940,31 @@ setFromValue value (Field tipe state) =
         }
 
 
+{-| -}
 setError : e -> Field e a -> Field e a
 setError =
     fail
 
 
+{-| -}
 setErrors : e -> List e -> Field e a -> Field e a
 setErrors =
     failWithErrors
 
 
+{-| -}
 setCustomError : e -> Field (Error e) a -> Field (Error e) a
 setCustomError =
     fail << CustomError
 
 
+{-| -}
 setCustomErrors : e -> List e -> Field (Error e) a -> Field (Error e) a
 setCustomErrors error errors =
     failWithErrors (CustomError error) (List.map CustomError errors)
 
 
+{-| -}
 clean : Field e a -> Field e a
 clean (Field tipe state) =
     Field
@@ -863,6 +972,7 @@ clean (Field tipe state) =
         { state | raw = Initial (rawToString state.raw) }
 
 
+{-| -}
 dirty : Field e a -> Field e a
 dirty (Field tipe state) =
     Field
@@ -874,26 +984,31 @@ dirty (Field tipe state) =
 -- QUERY
 
 
+{-| -}
 isEmpty : Field e a -> Bool
 isEmpty (Field _ { raw }) =
     String.isEmpty (rawToString raw)
 
 
+{-| -}
 isNonEmpty : Field e a -> Bool
 isNonEmpty =
     not << isEmpty
 
 
+{-| -}
 isBlank : Field e a -> Bool
 isBlank (Field _ { raw }) =
     String.isEmpty (String.trim (rawToString raw))
 
 
+{-| -}
 isNonBlank : Field e a -> Bool
 isNonBlank =
     not << isBlank
 
 
+{-| -}
 isClean : Field e a -> Bool
 isClean (Field _ { raw }) =
     case raw of
@@ -904,16 +1019,19 @@ isClean (Field _ { raw }) =
             False
 
 
+{-| -}
 isDirty : Field e a -> Bool
 isDirty =
     not << isClean
 
 
+{-| -}
 isValid : Field e a -> Bool
 isValid (Field _ { processed }) =
     V.isValid processed
 
 
+{-| -}
 isInvalid : Field e a -> Bool
 isInvalid =
     not << isValid
@@ -923,6 +1041,7 @@ isInvalid =
 -- CONVERT
 
 
+{-| -}
 toRawString : Field e a -> String
 toRawString (Field _ { raw }) =
     rawToString raw
@@ -938,21 +1057,7 @@ rawToString raw =
             s
 
 
-toMaybe : Field e a -> Maybe a
-toMaybe =
-    V.toMaybe << toValidation
-
-
-toResult : Field e a -> Result (List e) a
-toResult =
-    V.toResult << toValidation
-
-
-toValidation : Field e a -> Validation e a
-toValidation (Field _ { processed }) =
-    processed
-
-
+{-| -}
 toString : Field e a -> String
 toString (Field tipe { processed }) =
     processed
@@ -960,11 +1065,31 @@ toString (Field tipe { processed }) =
         |> V.withDefault ""
 
 
+{-| -}
+toMaybe : Field e a -> Maybe a
+toMaybe =
+    V.toMaybe << toValidation
+
+
+{-| -}
+toResult : Field e a -> Result (List e) a
+toResult =
+    V.toResult << toValidation
+
+
+{-| -}
+toValidation : Field e a -> Validation e a
+toValidation (Field _ { processed }) =
+    processed
+
+
+{-| -}
 toType : Field e a -> Type e a
 toType (Field tipe _) =
     tipe
 
 
+{-| -}
 toState : Field e a -> State e a
 toState (Field _ state) =
     state
@@ -974,6 +1099,7 @@ toState (Field _ state) =
 -- APPLICATIVE
 
 
+{-| -}
 applyMaybe : Field e a -> Maybe (a -> b) -> Maybe b
 applyMaybe field mf =
     case ( toMaybe field, mf ) of
@@ -984,6 +1110,7 @@ applyMaybe field mf =
             Nothing
 
 
+{-| -}
 applyResult : Field e a -> Result (List e) (a -> b) -> Result (List e) b
 applyResult field rf =
     case ( toResult field, rf ) of
@@ -997,41 +1124,49 @@ applyResult field rf =
             Err e2
 
 
+{-| -}
 validate2 : (a -> b -> value) -> Field x a -> Field x b -> Validation x value
 validate2 f field1 field2 =
     V.map2 f (toValidation field1) (toValidation field2)
 
 
+{-| -}
 validate3 : (a -> b -> c -> value) -> Field x a -> Field x b -> Field x c -> Validation x value
 validate3 f field1 field2 field3 =
     V.map3 f (toValidation field1) (toValidation field2) (toValidation field3)
 
 
+{-| -}
 validate4 : (a -> b -> c -> d -> value) -> Field x a -> Field x b -> Field x c -> Field x d -> Validation x value
 validate4 f field1 field2 field3 field4 =
     V.map4 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4)
 
 
+{-| -}
 validate5 : (a -> b -> c -> d -> e -> value) -> Field x a -> Field x b -> Field x c -> Field x d -> Field x e -> Validation x value
 validate5 f field1 field2 field3 field4 field5 =
     V.map5 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4) (toValidation field5)
 
 
+{-| -}
 get : Field e a -> (a -> b) -> Validation e b
 get field f =
     V.map f (toValidation field)
 
 
+{-| -}
 and : Field e a -> Validation e (a -> b) -> Validation e b
 and field =
     V.apply (toValidation field)
 
 
+{-| -}
 withDefault : a -> Validation e a -> a
 withDefault =
     V.withDefault
 
 
+{-| -}
 andMaybe : Validation e a -> Maybe a
 andMaybe =
     andFinally
@@ -1040,6 +1175,7 @@ andMaybe =
         }
 
 
+{-| -}
 andResult : Validation e a -> Result (List e) a
 andResult =
     andFinally
@@ -1048,6 +1184,7 @@ andResult =
         }
 
 
+{-| -}
 andFinally :
     { onSuccess : a -> b
     , onFailure : List e -> b
@@ -1067,6 +1204,7 @@ andFinally { onSuccess, onFailure } validation =
 -- HANDLE ERRORS
 
 
+{-| -}
 mapError : (x -> y) -> Field x a -> Field y a
 mapError f (Field tipe state) =
     Field
@@ -1076,21 +1214,25 @@ mapError f (Field tipe state) =
         }
 
 
+{-| -}
 fail : e -> Field e a -> Field e a
 fail error (Field tipe state) =
     Field tipe { state | processed = V.fail error }
 
 
+{-| -}
 failWithErrors : e -> List e -> Field e a -> Field e a
 failWithErrors error restErrors (Field tipe state) =
     Field tipe { state | processed = V.failWithErrors error restErrors }
 
 
+{-| -}
 prependError : e -> Field e a -> Field e a
 prependError newError field =
     failWithErrors newError (allErrors field) field
 
 
+{-| -}
 appendError : e -> Field e a -> Field e a
 appendError newError field =
     case allErrors field of
@@ -1101,16 +1243,19 @@ appendError newError field =
             failWithErrors error (restErrors ++ [ newError ]) field
 
 
+{-| -}
 firstError : Field e a -> Maybe e
 firstError (Field _ { processed }) =
     V.firstError processed
 
 
+{-| -}
 lastError : Field e a -> Maybe e
 lastError (Field _ { processed }) =
     V.lastError processed
 
 
+{-| -}
 allErrors : Field e a -> List e
 allErrors (Field _ { processed }) =
     V.allErrors processed
