@@ -1,7 +1,6 @@
 module Field exposing
-    ( Field
-    , FieldString
-    , Type
+    ( Field, FieldString, Validation
+    , Type, TypeString
     , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt
     , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat
     , bool, true, false, customSubsetOfBool
@@ -14,22 +13,13 @@ module Field exposing
     , optional
     , empty, fromString, fromValue
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
-    , clean, dirty
-    , isEmpty, isNonEmpty
-    , isBlank, isNonBlank
-    , isClean, isDirty
-    , isValid, isInvalid
-    , toRawString, toString
-    , toMaybe, toResult
-    , Validation, toValidation
-    , toType, toState
+    , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
+    , toRawString, toString, toMaybe, toResult, toValidation, toType, toState
     , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
-    , get, and
-    , withDefault, andMaybe, andResult, andFinally
+    , get, and, withDefault, andMaybe, andResult, andFinally
     , trim
-    , Error, blankError, syntaxError, validationError, customError
-    , errorToString
+    , Error, blankError, syntaxError, validationError, customError, errorToString
     , mapTypeError
     , mapError
     , fail, failWithErrors
@@ -42,13 +32,12 @@ module Field exposing
 
 # Field
 
-@docs Field
-@docs FieldString
+@docs Field, FieldString, Validation
 
 
 # Type
 
-@docs Type
+@docs Type, TypeString
 
 
 # Primitive
@@ -102,31 +91,23 @@ TODO: Explain about empty and blank strings.
 # Change
 
 @docs setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
-@docs clean, dirty
 
 
 # Query
 
-@docs isEmpty, isNonEmpty
-@docs isBlank, isNonBlank
-@docs isClean, isDirty
-@docs isValid, isInvalid
+@docs isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
 
 
 # Convert
 
-@docs toRawString, toString
-@docs toMaybe, toResult
-@docs Validation, toValidation
-@docs toType, toState
+@docs toRawString, toString, toMaybe, toResult, toValidation, toType, toState
 
 
 # Applicative
 
 @docs applyMaybe, applyResult
 @docs validate2, validate3, validate4, validate5
-@docs get, and
-@docs withDefault, andMaybe, andResult, andFinally
+@docs get, and, withDefault, andMaybe, andResult, andFinally
 
 
 # Helpers
@@ -136,8 +117,7 @@ TODO: Explain about empty and blank strings.
 
 # Error
 
-@docs Error, blankError, syntaxError, validationError, customError
-@docs errorToString
+@docs Error, blankError, syntaxError, validationError, customError, errorToString
 
 
 # Handle Errors
@@ -181,6 +161,11 @@ type alias Validation e a =
 {-| -}
 type alias Type a =
     F.Type Error a
+
+
+{-| -}
+type alias TypeString =
+    F.Type Never String
 
 
 
@@ -345,7 +330,7 @@ subsetOfChar =
 
 
 {-| -}
-string : F.Type Never String
+string : TypeString
 string =
     F.string
 
@@ -402,16 +387,6 @@ customType =
 optional : Type a -> Type (Maybe a)
 optional =
     F.optional
-
-
-
--- TYPE: MAP
-
-
-{-| -}
-mapTypeError : (x -> y) -> F.Type x a -> F.Type y a
-mapTypeError =
-    F.mapTypeError
 
 
 
@@ -513,15 +488,15 @@ setFromValue =
 
 
 {-| -}
-setError : e -> F.Field e a -> F.Field e a
+setError : Error -> Field a -> Field a
 setError =
-    fail
+    F.setError
 
 
 {-| -}
-setErrors : e -> List e -> F.Field e a -> F.Field e a
+setErrors : Error -> List Error -> Field a -> Field a
 setErrors =
-    failWithErrors
+    F.setErrors
 
 
 {-| -}
@@ -534,18 +509,6 @@ setCustomError =
 setCustomErrors : String -> List String -> Field a -> Field a
 setCustomErrors =
     F.setCustomErrors
-
-
-{-| -}
-clean : F.Field e a -> F.Field e a
-clean =
-    F.clean
-
-
-{-| -}
-dirty : F.Field e a -> F.Field e a
-dirty =
-    F.dirty
 
 
 
@@ -732,19 +695,25 @@ andFinally =
 
 
 {-| -}
+mapTypeError : (x -> y) -> F.Type x a -> F.Type y a
+mapTypeError =
+    F.mapTypeError
+
+
+{-| -}
 mapError : (x -> y) -> F.Field x a -> F.Field y a
 mapError =
     F.mapError
 
 
 {-| -}
-fail : e -> F.Field e a -> F.Field e a
+fail : Error -> Field a -> Field a
 fail =
     F.fail
 
 
 {-| -}
-failWithErrors : e -> List e -> F.Field e a -> F.Field e a
+failWithErrors : Error -> List Error -> Field a -> Field a
 failWithErrors =
     F.failWithErrors
 

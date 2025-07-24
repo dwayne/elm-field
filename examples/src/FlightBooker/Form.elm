@@ -132,12 +132,7 @@ updateReturn return departure fields =
                 fields
 
             else
-                { fields
-                    | return =
-                        return
-                            |> F.setCustomError "The return date must be on or after the departure date."
-                            |> F.dirty
-                }
+                { fields | return = F.setCustomError "The return date must be on or after the departure date." return }
 
         _ ->
             fields

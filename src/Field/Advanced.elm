@@ -1,10 +1,9 @@
 module Field.Advanced exposing
-    ( Field
-    , State, Raw(..), Validation
+    ( Field, State, Raw(..), Validation
     , Type
     , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt, customInt
     , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
-    , bool, true, false, subsetOfBool, customSubsetOfBool, customBool
+    , bool, true, false, customSubsetOfBool
     , CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
     , char, subsetOfChar, customSubsetOfChar
     , string, subsetOfString, customSubsetOfString, customString
@@ -14,20 +13,13 @@ module Field.Advanced exposing
     , optional, customOptional
     , empty, fromString, fromValue
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
-    , clean, dirty
-    , isEmpty, isNonEmpty
-    , isBlank, isNonBlank
-    , isClean, isDirty
-    , isValid, isInvalid
+    , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
     , toRawString, toString, toMaybe, toResult, toValidation, toType, toState
     , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
-    , get, and
-    , withDefault, andMaybe, andResult, andFinally
+    , get, and, withDefault, andMaybe, andResult, andFinally
     , trim, customTrim
-    , Error, blankError, syntaxError, validationError, customError
-    , errorToString
-    , mapErrorType
+    , Error, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
     , mapTypeError
     , mapError
     , fail, failWithErrors
@@ -40,8 +32,7 @@ module Field.Advanced exposing
 
 # Field
 
-@docs Field
-@docs State, Raw, Validation
+@docs Field, State, Raw, Validation
 
 
 # Type
@@ -64,7 +55,7 @@ module Field.Advanced exposing
 
 # Bool
 
-@docs bool, true, false, subsetOfBool, customSubsetOfBool, customBool
+@docs bool, true, false, customSubsetOfBool
 @docs CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
 
 
@@ -100,15 +91,11 @@ TODO: Explain about empty and blank strings.
 # Change
 
 @docs setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
-@docs clean, dirty
 
 
 # Query
 
-@docs isEmpty, isNonEmpty
-@docs isBlank, isNonBlank
-@docs isClean, isDirty
-@docs isValid, isInvalid
+@docs isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
 
 
 # Convert
@@ -120,8 +107,7 @@ TODO: Explain about empty and blank strings.
 
 @docs applyMaybe, applyResult
 @docs validate2, validate3, validate4, validate5
-@docs get, and
-@docs withDefault, andMaybe, andResult, andFinally
+@docs get, and, withDefault, andMaybe, andResult, andFinally
 
 
 # Helpers
@@ -131,9 +117,7 @@ TODO: Explain about empty and blank strings.
 
 # Error
 
-@docs Error, blankError, syntaxError, validationError, customError
-@docs errorToString
-@docs mapErrorType
+@docs Error, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
 
 
 # Handle Errors
@@ -389,7 +373,6 @@ false =
     subsetOfBool ((==) False)
 
 
-{-| -}
 subsetOfBool : (Bool -> Bool) -> Type (Error e) Bool
 subsetOfBool =
     customSubsetOfBool
@@ -479,7 +462,6 @@ customSubsetOfBool errors options isGood =
         )
 
 
-{-| -}
 customBool :
     { blank : e
     , syntaxError : String -> e
@@ -769,124 +751,6 @@ customOptional isBlankError tipe =
 
 
 
--- TYPE: MAP
-
-
-{-| -}
-mapTypeError : (x -> y) -> Type x a -> Type y a
-mapTypeError f tipe =
-    { fromString = tipe.fromString >> Result.mapError f
-    , fromValue = tipe.fromValue >> Result.mapError f
-    , toString = tipe.toString
-    }
-
-
-
--- HELPERS
-
-
-{-| -}
-trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
-trim =
-    customTrim Blank
-
-
-{-| -}
-customTrim : e -> (String -> Result e a) -> String -> Result e a
-customTrim blank f s =
-    let
-        t =
-            String.trim s
-    in
-    if String.isEmpty t then
-        Err blank
-
-    else
-        f t
-
-
-
--- ERROR
-
-
-{-| -}
-type Error e
-    = Blank -- The empty string or a string containing only whitespace characters
-      --
-      -- The string in the SyntaxError and the ValidationError should always be the string that caused the error.
-      -- It should NEVER be a description of the error. CustomError is used for detail.
-      --
-    | SyntaxError String -- A string that cannot be converted to the desired type, for e.g. "x" isn't an Int
-    | ValidationError String -- A type that isn't in the subset of the type under consideration, for e.g. 1 is an Int but not an even Int
-    | CustomError e -- A more specific type of validation error
-
-
-{-| -}
-blankError : Error e
-blankError =
-    Blank
-
-
-{-| -}
-syntaxError : String -> Error e
-syntaxError =
-    SyntaxError
-
-
-{-| -}
-validationError : String -> Error e
-validationError =
-    ValidationError
-
-
-{-| -}
-customError : e -> Error e
-customError =
-    CustomError
-
-
-{-| -}
-errorToString :
-    { onBlank : String
-    , onSyntaxError : String -> String
-    , onValidationError : String -> String
-    , onCustomError : e -> String
-    }
-    -> Error e
-    -> String
-errorToString { onBlank, onSyntaxError, onValidationError, onCustomError } error =
-    case error of
-        Blank ->
-            onBlank
-
-        SyntaxError s ->
-            onSyntaxError s
-
-        ValidationError s ->
-            onValidationError s
-
-        CustomError e ->
-            onCustomError e
-
-
-{-| -}
-mapErrorType : (x -> y) -> Error x -> Error y
-mapErrorType f error =
-    case error of
-        Blank ->
-            Blank
-
-        SyntaxError s ->
-            SyntaxError s
-
-        ValidationError s ->
-            ValidationError s
-
-        CustomError x ->
-            CustomError (f x)
-
-
-
 -- CONSTRUCT
 
 
@@ -942,42 +806,34 @@ setFromValue value (Field tipe state) =
 
 {-| -}
 setError : e -> Field e a -> Field e a
-setError =
-    fail
+setError error (Field tipe state) =
+    Field
+        tipe
+        { raw = Dirty (rawToString state.raw)
+        , processed = V.fail error
+        }
 
 
 {-| -}
 setErrors : e -> List e -> Field e a -> Field e a
-setErrors =
-    failWithErrors
+setErrors error restErrors (Field tipe state) =
+    Field
+        tipe
+        { raw = Dirty (rawToString state.raw)
+        , processed = V.failWithErrors error restErrors
+        }
 
 
 {-| -}
 setCustomError : e -> Field (Error e) a -> Field (Error e) a
 setCustomError =
-    fail << CustomError
+    setError << CustomError
 
 
 {-| -}
 setCustomErrors : e -> List e -> Field (Error e) a -> Field (Error e) a
-setCustomErrors error errors =
-    failWithErrors (CustomError error) (List.map CustomError errors)
-
-
-{-| -}
-clean : Field e a -> Field e a
-clean (Field tipe state) =
-    Field
-        tipe
-        { state | raw = Initial (rawToString state.raw) }
-
-
-{-| -}
-dirty : Field e a -> Field e a
-dirty (Field tipe state) =
-    Field
-        tipe
-        { state | raw = Dirty (rawToString state.raw) }
+setCustomErrors error restErrors =
+    setErrors (CustomError error) (List.map CustomError restErrors)
 
 
 
@@ -1201,7 +1057,121 @@ andFinally { onSuccess, onFailure } validation =
 
 
 
+-- HELPERS
+
+
+{-| -}
+trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
+trim =
+    customTrim Blank
+
+
+{-| -}
+customTrim : e -> (String -> Result e a) -> String -> Result e a
+customTrim blank f s =
+    let
+        t =
+            String.trim s
+    in
+    if String.isEmpty t then
+        Err blank
+
+    else
+        f t
+
+
+
+-- ERROR
+
+
+{-| -}
+type Error e
+    = Blank -- The empty string or a string containing only whitespace characters
+      --
+      -- The string in the SyntaxError and the ValidationError should always be the string that caused the error.
+      -- It should NEVER be a description of the error. CustomError is used for detail.
+      --
+    | SyntaxError String -- A string that cannot be converted to the desired type, for e.g. "x" isn't an Int
+    | ValidationError String -- A type that isn't in the subset of the type under consideration, for e.g. 1 is an Int but not an even Int
+    | CustomError e -- A more specific type of validation error
+
+
+{-| -}
+blankError : Error e
+blankError =
+    Blank
+
+
+{-| -}
+syntaxError : String -> Error e
+syntaxError =
+    SyntaxError
+
+
+{-| -}
+validationError : String -> Error e
+validationError =
+    ValidationError
+
+
+{-| -}
+customError : e -> Error e
+customError =
+    CustomError
+
+
+{-| -}
+errorToString :
+    { onBlank : String
+    , onSyntaxError : String -> String
+    , onValidationError : String -> String
+    , onCustomError : e -> String
+    }
+    -> Error e
+    -> String
+errorToString { onBlank, onSyntaxError, onValidationError, onCustomError } error =
+    case error of
+        Blank ->
+            onBlank
+
+        SyntaxError s ->
+            onSyntaxError s
+
+        ValidationError s ->
+            onValidationError s
+
+        CustomError e ->
+            onCustomError e
+
+
+{-| -}
+mapErrorType : (x -> y) -> Error x -> Error y
+mapErrorType f error =
+    case error of
+        Blank ->
+            Blank
+
+        SyntaxError s ->
+            SyntaxError s
+
+        ValidationError s ->
+            ValidationError s
+
+        CustomError x ->
+            CustomError (f x)
+
+
+
 -- HANDLE ERRORS
+
+
+{-| -}
+mapTypeError : (x -> y) -> Type x a -> Type y a
+mapTypeError f tipe =
+    { fromString = tipe.fromString >> Result.mapError f
+    , fromValue = tipe.fromValue >> Result.mapError f
+    , toString = tipe.toString
+    }
 
 
 {-| -}
