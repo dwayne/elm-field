@@ -1,5 +1,5 @@
 module Field exposing
-    ( Field, FieldString, Validation
+    ( Field, FieldString
     , Type, TypeString
     , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt
     , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat
@@ -9,12 +9,14 @@ module Field exposing
     , string, subsetOfString
     , nonEmptyString, subsetOfNonEmptyString
     , nonBlankString, subsetOfNonBlankString
-    , customType
+    , subsetOfType, customType
     , optional
     , empty, fromString, fromValue
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
     , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
-    , toRawString, toString, toMaybe, toResult, toValidation, toType, toState
+    , toRawString, toString, toMaybe, toResult, toType
+    , Validation, toValidation
+    , Conversion, typeToConversion, toConversion
     , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
     , get, and, withDefault, andMaybe, andResult, andFinally
@@ -32,7 +34,7 @@ module Field exposing
 
 # Field
 
-@docs Field, FieldString, Validation
+@docs Field, FieldString
 
 
 # Type
@@ -75,7 +77,7 @@ TODO: Explain about empty and blank strings.
 
 # User-defined
 
-@docs customType
+@docs subsetOfType, customType
 
 
 # Optional
@@ -100,7 +102,17 @@ TODO: Explain about empty and blank strings.
 
 # Convert
 
-@docs toRawString, toString, toMaybe, toResult, toValidation, toType, toState
+@docs toRawString, toString, toMaybe, toResult, toType
+
+
+# Validation
+
+@docs Validation, toValidation
+
+
+# Conversion
+
+@docs Conversion, typeToConversion, toConversion
 
 
 # Applicative
@@ -166,6 +178,11 @@ type alias Type a =
 {-| -}
 type alias TypeString =
     F.Type Never String
+
+
+{-| -}
+type alias Conversion e a =
+    F.Conversion e a
 
 
 
@@ -370,6 +387,12 @@ subsetOfNonBlankString =
 
 
 {-| -}
+subsetOfType : (a -> Bool) -> Type a -> Type a
+subsetOfType =
+    F.subsetOfType
+
+
+{-| -}
 customType :
     { fromString : String -> Result Error a
     , toString : a -> String
@@ -387,6 +410,16 @@ customType =
 optional : Type a -> Type (Maybe a)
 optional =
     F.optional
+
+
+
+-- TYPE: CONVERT
+
+
+{-| -}
+typeToConversion : F.Type e a -> Conversion e a
+typeToConversion =
+    F.typeToConversion
 
 
 
@@ -598,15 +631,15 @@ toString =
 
 
 {-| -}
-toType : F.Field e a -> F.Type e a
-toType =
-    F.toType
+toConversion : F.Field e a -> F.Conversion e a
+toConversion =
+    F.toConversion
 
 
 {-| -}
-toState : F.Field e a -> F.State e a
-toState =
-    F.toState
+toType : F.Field e a -> F.Type e a
+toType =
+    F.toType
 
 
 

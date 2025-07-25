@@ -24,7 +24,7 @@ type CustomError
 
 fromString : String -> Result Error PasswordConfirmation
 fromString =
-    F.nonBlankString.fromString >> Result.map PasswordConfirmation
+    (F.typeToConversion F.nonBlankString).fromString >> Result.map PasswordConfirmation
 
 
 toString : PasswordConfirmation -> String

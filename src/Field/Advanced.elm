@@ -1,5 +1,5 @@
 module Field.Advanced exposing
-    ( Field, State, Raw(..), Validation
+    ( Field
     , Type
     , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt, customInt
     , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
@@ -9,12 +9,15 @@ module Field.Advanced exposing
     , string, subsetOfString, customSubsetOfString, customString
     , nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString, customNonEmptyString
     , nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString, customNonBlankString
-    , customType
+    , subsetOfType, customSubsetOfType, customType
     , optional, customOptional
     , empty, fromString, fromValue
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
     , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
-    , toRawString, toString, toMaybe, toResult, toValidation, toType, toState
+    , toRawString, toString, toMaybe, toResult, toType
+    , State, Raw(..), toState
+    , Validation, toValidation
+    , Conversion, typeToConversion, toConversion
     , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
     , get, and, withDefault, andMaybe, andResult, andFinally
@@ -32,7 +35,7 @@ module Field.Advanced exposing
 
 # Field
 
-@docs Field, State, Raw, Validation
+@docs Field
 
 
 # Type
@@ -75,7 +78,7 @@ TODO: Explain about empty and blank strings.
 
 # User-defined
 
-@docs customType
+@docs subsetOfType, customSubsetOfType, customType
 
 
 # Optional
@@ -100,7 +103,22 @@ TODO: Explain about empty and blank strings.
 
 # Convert
 
-@docs toRawString, toString, toMaybe, toResult, toValidation, toType, toState
+@docs toRawString, toString, toMaybe, toResult, toType
+
+
+# State
+
+@docs State, Raw, toState
+
+
+# Validation
+
+@docs Validation, toValidation
+
+
+# Conversion
+
+@docs Conversion, typeToConversion, toConversion
 
 
 # Applicative
@@ -138,25 +156,41 @@ import Validation as V
 -- FIELD
 
 
-{-| -}
+{-| A `Field` is a data structure that knows how to go from a `String` to an `a`. Any errors, `e`, can be accumulated over time.
+-}
 type Field e a
-    = Field (Type e a) (State e a)
+    = Field (Conversion e a) (State e a)
 
 
-{-| -}
+{-| The internal state of a `Field`.
+
+It contains the unprocessed string in `raw` and the result of parsing the unprocessed string in `processed`. The result is stored
+as a `Validation` so that any errors can be accumulated over time.
+
+-}
 type alias State e a =
     { raw : Raw
     , processed : Validation e a
     }
 
 
-{-| -}
+{-| A raw string can be categorized as either **clean** or **dirty**.
+
+A **clean raw string** is one that has never been changed after initially setting it on the field whereas a **dirty raw string** is one
+that has been changed one or more times.
+
+**FIXME:** This doesn't quite make sense. Since with a clean string we can still have a dirty field because the processed value has changed.
+Maybe we need to store a `Bool` in the state, called `clean`, that is `True` if the field hasn't changed since initialization and is `False`
+if it has changed since initialization.
+
+-}
 type Raw
-    = Initial String
+    = Clean String
     | Dirty String
 
 
-{-| -}
+{-| Re-export the `Validation` type for convenience.
+-}
 type alias Validation e a =
     V.Validation e a
 
@@ -166,7 +200,12 @@ type alias Validation e a =
 
 
 {-| -}
-type alias Type e a =
+type Type e a
+    = Type (Conversion e a)
+
+
+{-| -}
+type alias Conversion e a =
     { fromString : String -> Result e a
     , fromValue : a -> Result e a
     , toString : a -> String
@@ -221,6 +260,10 @@ subsetOfInt =
 customSubsetOfInt :
     { blank : e
     , syntaxError : String -> e
+
+    --
+    -- I think validationError should take a String rather than an Int. Same for the other functions.
+    --
     , validationError : Int -> e
     }
     -> (Int -> Bool)
@@ -247,19 +290,20 @@ customInt :
     -> (Int -> Result e Int)
     -> Type e Int
 customInt errors validate =
-    { fromString =
-        customTrim errors.blank
-            (\s ->
-                case String.toInt s of
-                    Just n ->
-                        validate n
+    Type
+        { fromString =
+            customTrim errors.blank
+                (\s ->
+                    case String.toInt s of
+                        Just n ->
+                            validate n
 
-                    Nothing ->
-                        Err (errors.syntaxError s)
-            )
-    , fromValue = validate
-    , toString = String.fromInt
-    }
+                        Nothing ->
+                            Err (errors.syntaxError s)
+                )
+        , fromValue = validate
+        , toString = String.fromInt
+        }
 
 
 
@@ -336,19 +380,20 @@ customFloat :
     -> (Float -> Result e Float)
     -> Type e Float
 customFloat errors validate =
-    { fromString =
-        customTrim errors.blank
-            (\s ->
-                case String.toFloat s of
-                    Just f ->
-                        validate f
+    Type
+        { fromString =
+            customTrim errors.blank
+                (\s ->
+                    case String.toFloat s of
+                        Just f ->
+                            validate f
 
-                    Nothing ->
-                        Err (errors.syntaxError s)
-            )
-    , fromValue = validate
-    , toString = String.fromFloat
-    }
+                        Nothing ->
+                            Err (errors.syntaxError s)
+                )
+        , fromValue = validate
+        , toString = String.fromFloat
+        }
 
 
 
@@ -470,29 +515,30 @@ customBool :
     -> (Bool -> Result e Bool)
     -> Type e Bool
 customBool errors options validate =
-    { fromString =
-        customTrim errors.blank
-            (\s ->
-                let
-                    t =
-                        if options.caseSensitive then
-                            s
+    Type
+        { fromString =
+            customTrim errors.blank
+                (\s ->
+                    let
+                        t =
+                            if options.caseSensitive then
+                                s
 
-                        else
-                            String.toLower s
-                in
-                if Set.member t options.truthy then
-                    validate True
+                            else
+                                String.toLower s
+                    in
+                    if Set.member t options.truthy then
+                        validate True
 
-                else if Set.member t options.falsy then
-                    validate False
+                    else if Set.member t options.falsy then
+                        validate False
 
-                else
-                    Err (errors.syntaxError s)
-            )
-    , fromValue = validate
-    , toString = options.toString
-    }
+                    else
+                        Err (errors.syntaxError s)
+                )
+        , fromValue = validate
+        , toString = options.toString
+        }
 
 
 
@@ -532,20 +578,21 @@ customSubsetOfChar errors isGood =
             else
                 Err (errors.validationError ch)
     in
-    { fromString =
-        \s ->
-            case String.uncons s of
-                Just ( ch, "" ) ->
-                    validate ch
+    Type
+        { fromString =
+            \s ->
+                case String.uncons s of
+                    Just ( ch, "" ) ->
+                        validate ch
 
-                Just _ ->
-                    Err (errors.syntaxError s)
+                    Just _ ->
+                        Err (errors.syntaxError s)
 
-                Nothing ->
-                    Err errors.blank
-    , fromValue = validate
-    , toString = String.fromChar
-    }
+                    Nothing ->
+                        Err errors.blank
+        , fromValue = validate
+        , toString = String.fromChar
+        }
 
 
 
@@ -678,14 +725,39 @@ customValidateStringWith toValidationError isGood s =
 {-| -}
 customString : (String -> Result e String) -> Type e String
 customString validate =
-    { fromString = validate
-    , fromValue = validate
-    , toString = identity
-    }
+    Type
+        { fromString = validate
+        , fromValue = validate
+        , toString = identity
+        }
 
 
 
 -- TYPE: USER-DEFINED
+
+
+{-| -}
+subsetOfType : (a -> Bool) -> Type (Error e) a -> Type (Error e) a
+subsetOfType =
+    customSubsetOfType ValidationError
+
+
+{-| -}
+customSubsetOfType : (String -> e) -> (a -> Bool) -> Type e a -> Type e a
+customSubsetOfType toValidationError isGood (Type conversion) =
+    let
+        validate x =
+            if isGood x then
+                Ok x
+
+            else
+                Err (toValidationError <| conversion.toString x)
+    in
+    Type
+        { fromString = conversion.fromString >> Result.andThen validate
+        , fromValue = conversion.fromValue >> Result.andThen validate
+        , toString = conversion.toString
+        }
 
 
 {-| -}
@@ -695,10 +767,11 @@ customType :
     }
     -> Type e a
 customType options =
-    { fromString = options.fromString
-    , fromValue = Ok
-    , toString = options.toString
-    }
+    Type
+        { fromString = options.fromString
+        , fromValue = Ok
+        , toString = options.toString
+        }
 
 
 
@@ -716,38 +789,49 @@ optional =
 
 {-| -}
 customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
-customOptional isBlankError tipe =
-    { fromString =
-        \s ->
-            case tipe.fromString s of
-                Ok value ->
-                    Ok (Just value)
+customOptional isBlankError (Type conversion) =
+    Type
+        { fromString =
+            \s ->
+                case conversion.fromString s of
+                    Ok value ->
+                        Ok (Just value)
 
-                Err err ->
-                    if isBlankError err then
+                    Err err ->
+                        if isBlankError err then
+                            Ok Nothing
+
+                        else
+                            Err err
+        , fromValue =
+            \maybeValue ->
+                case maybeValue of
+                    Just v1 ->
+                        case conversion.fromValue v1 of
+                            Ok v2 ->
+                                Ok (Just v2)
+
+                            Err err ->
+                                if isBlankError err then
+                                    Ok Nothing
+
+                                else
+                                    Err err
+
+                    Nothing ->
                         Ok Nothing
+        , toString = Maybe.map conversion.toString >> Maybe.withDefault ""
+        }
 
-                    else
-                        Err err
-    , fromValue =
-        \maybeValue ->
-            case maybeValue of
-                Just v1 ->
-                    case tipe.fromValue v1 of
-                        Ok v2 ->
-                            Ok (Just v2)
 
-                        Err err ->
-                            if isBlankError err then
-                                Ok Nothing
 
-                            else
-                                Err err
+-- TYPE: CONVERT
 
-                Nothing ->
-                    Ok Nothing
-    , toString = Maybe.map tipe.toString >> Maybe.withDefault ""
-    }
+
+{-| -}
+typeToConversion : Type e a -> Conversion e a
+typeToConversion (Type conversion) =
+    conversion
 
 
 
@@ -762,21 +846,21 @@ empty tipe =
 
 {-| -}
 fromString : Type e a -> String -> Field e a
-fromString tipe s =
+fromString (Type conversion) s =
     Field
-        tipe
-        { raw = Initial s
-        , processed = V.fromResult (tipe.fromString s)
+        conversion
+        { raw = Clean s
+        , processed = V.fromResult (conversion.fromString s)
         }
 
 
 {-| -}
 fromValue : Type e a -> a -> Field e a
-fromValue tipe value =
+fromValue (Type conversion) value =
     Field
-        tipe
-        { raw = Initial (tipe.toString value)
-        , processed = V.fromResult (tipe.fromValue value)
+        conversion
+        { raw = Clean (conversion.toString value)
+        , processed = V.fromResult (conversion.fromValue value)
         }
 
 
@@ -786,29 +870,29 @@ fromValue tipe value =
 
 {-| -}
 setFromString : String -> Field e a -> Field e a
-setFromString s (Field tipe state) =
+setFromString s (Field conversion state) =
     Field
-        tipe
+        conversion
         { raw = Dirty s
-        , processed = V.fromResult (tipe.fromString s)
+        , processed = V.fromResult (conversion.fromString s)
         }
 
 
 {-| -}
 setFromValue : a -> Field e a -> Field e a
-setFromValue value (Field tipe state) =
+setFromValue value (Field conversion state) =
     Field
-        tipe
-        { raw = Dirty (tipe.toString value)
-        , processed = V.fromResult (tipe.fromValue value)
+        conversion
+        { raw = Dirty (conversion.toString value)
+        , processed = V.fromResult (conversion.fromValue value)
         }
 
 
 {-| -}
 setError : e -> Field e a -> Field e a
-setError error (Field tipe state) =
+setError error (Field conversion state) =
     Field
-        tipe
+        conversion
         { raw = Dirty (rawToString state.raw)
         , processed = V.fail error
         }
@@ -816,9 +900,9 @@ setError error (Field tipe state) =
 
 {-| -}
 setErrors : e -> List e -> Field e a -> Field e a
-setErrors error restErrors (Field tipe state) =
+setErrors error restErrors (Field conversion state) =
     Field
-        tipe
+        conversion
         { raw = Dirty (rawToString state.raw)
         , processed = V.failWithErrors error restErrors
         }
@@ -868,7 +952,7 @@ isNonBlank =
 isClean : Field e a -> Bool
 isClean (Field _ { raw }) =
     case raw of
-        Initial _ ->
+        Clean _ ->
             True
 
         Dirty _ ->
@@ -906,7 +990,7 @@ toRawString (Field _ { raw }) =
 rawToString : Raw -> String
 rawToString raw =
     case raw of
-        Initial s ->
+        Clean s ->
             s
 
         Dirty s ->
@@ -940,9 +1024,15 @@ toValidation (Field _ { processed }) =
 
 
 {-| -}
+toConversion : Field e a -> Conversion e a
+toConversion (Field conversion _) =
+    conversion
+
+
+{-| -}
 toType : Field e a -> Type e a
-toType (Field tipe _) =
-    tipe
+toType (Field conversion _) =
+    Type conversion
 
 
 {-| -}
@@ -1167,33 +1257,38 @@ mapErrorType f error =
 
 {-| -}
 mapTypeError : (x -> y) -> Type x a -> Type y a
-mapTypeError f tipe =
-    { fromString = tipe.fromString >> Result.mapError f
-    , fromValue = tipe.fromValue >> Result.mapError f
-    , toString = tipe.toString
-    }
+mapTypeError f (Type conversion) =
+    Type (mapConversionError f conversion)
 
 
 {-| -}
 mapError : (x -> y) -> Field x a -> Field y a
-mapError f (Field tipe state) =
+mapError f (Field conversion state) =
     Field
-        (mapTypeError f tipe)
+        (mapConversionError f conversion)
         { raw = state.raw
         , processed = V.mapError f state.processed
         }
 
 
+mapConversionError : (x -> y) -> Conversion x a -> Conversion y a
+mapConversionError f conversion =
+    { fromString = conversion.fromString >> Result.mapError f
+    , fromValue = conversion.fromValue >> Result.mapError f
+    , toString = conversion.toString
+    }
+
+
 {-| -}
 fail : e -> Field e a -> Field e a
-fail error (Field tipe state) =
-    Field tipe { state | processed = V.fail error }
+fail error (Field conversion state) =
+    Field conversion { state | processed = V.fail error }
 
 
 {-| -}
 failWithErrors : e -> List e -> Field e a -> Field e a
-failWithErrors error restErrors (Field tipe state) =
-    Field tipe { state | processed = V.failWithErrors error restErrors }
+failWithErrors error restErrors (Field conversion state) =
+    Field conversion { state | processed = V.failWithErrors error restErrors }
 
 
 {-| -}

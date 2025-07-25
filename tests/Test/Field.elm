@@ -513,31 +513,80 @@ stringSuite =
 userDefinedTypesSuite : Test
 userDefinedTypesSuite =
     describe "User-defined"
-        [ describe "Example: Username"
-            [ test "it is required" <|
-                \_ ->
-                    F.fromString Username.fieldType ""
-                        |> F.toResult
-                        |> Expect.equal (Err [ F.blankError ])
-            , fuzz (Fuzz.asciiStringOfLengthBetween 1 4) "it must be at least 5 characters long" <|
-                \s ->
-                    F.fromString Username.fieldType s
-                        |> F.toResult
-                        |> Expect.equal
-                            (Err
-                                [ if String.isEmpty (String.trim s) then
-                                    F.blankError
+        [ describe "subsetOfType"
+            [ describe "Example: The even non-negative integers" <|
+                let
+                    evens =
+                        F.subsetOfType (modBy 2 >> (==) 0) F.nonNegativeInt
+                in
+                [ describe "fromString"
+                    [ test "it is required" <|
+                        \_ ->
+                            F.fromString evens ""
+                                |> F.toResult
+                                |> Expect.equal (Err [ F.blankError ])
+                    , test "it must be non-negative" <|
+                        \_ ->
+                            F.fromString evens "-2"
+                                |> F.toResult
+                                |> Expect.equal (Err [ F.validationError "-2" ])
+                    , test "it must be even" <|
+                        \_ ->
+                            F.fromString evens "1"
+                                |> F.toResult
+                                |> Expect.equal (Err [ F.validationError "1" ])
+                    , fuzz (Fuzz.oneOfValues [ "0", "2", "4", "6", "8", "10" ]) "it is valid" <|
+                        \s ->
+                            F.fromString evens s
+                                |> F.toMaybe
+                                |> Expect.equal (String.toInt s)
+                    ]
+                , describe "fromValue"
+                    [ test "it must be non-negative" <|
+                        \_ ->
+                            F.fromValue evens -2
+                                |> F.toResult
+                                |> Expect.equal (Err [ F.validationError "-2" ])
+                    , test "it must be even" <|
+                        \_ ->
+                            F.fromValue evens 1
+                                |> F.toResult
+                                |> Expect.equal (Err [ F.validationError "1" ])
+                    , fuzz (Fuzz.oneOfValues [ 0, 2, 4, 6, 8, 10 ]) "it is valid" <|
+                        \n ->
+                            F.fromValue evens n
+                                |> F.toMaybe
+                                |> Expect.equal (Just n)
+                    ]
+                ]
+            ]
+        , describe "customType"
+            [ describe "Example: Username"
+                [ test "it is required" <|
+                    \_ ->
+                        F.fromString Username.fieldType ""
+                            |> F.toResult
+                            |> Expect.equal (Err [ F.blankError ])
+                , fuzz (Fuzz.asciiStringOfLengthBetween 1 4) "it must be at least 5 characters long" <|
+                    \s ->
+                        F.fromString Username.fieldType s
+                            |> F.toResult
+                            |> Expect.equal
+                                (Err
+                                    [ if String.isEmpty (String.trim s) then
+                                        F.blankError
 
-                                  else
-                                    F.customError "Too short"
-                                ]
-                            )
-            , fuzz (Fuzz.oneOfValues [ "abcde", "abcdef", "abcdefg" ]) "valid usernames" <|
-                \s ->
-                    F.fromString Username.fieldType s
-                        |> F.toResult
-                        |> Result.map Username.toString
-                        |> Expect.equal (Ok s)
+                                      else
+                                        F.customError "Too short"
+                                    ]
+                                )
+                , fuzz (Fuzz.oneOfValues [ "abcde", "abcdef", "abcdefg" ]) "valid usernames" <|
+                    \s ->
+                        F.fromString Username.fieldType s
+                            |> F.toResult
+                            |> Result.map Username.toString
+                            |> Expect.equal (Ok s)
+                ]
             ]
         ]
 

@@ -78,7 +78,7 @@ view { field, options, toOption, errorToString, isRequired, isDisabled, onInput,
             ]
 
         { toString } =
-            F.toType field
+            F.toConversion field
     in
     H.select
         (attrs ++ requiredAttrs ++ dataEmptyAttrs ++ otherAttrs)
@@ -109,7 +109,7 @@ onSelect : Field e a -> (e -> String) -> (a -> msg) -> H.Attribute msg
 onSelect field errorToString toMsg =
     let
         { fromString } =
-            F.toType field
+            F.toConversion field
     in
     HE.stopPropagationOn "input"
         (HE.targetValue
