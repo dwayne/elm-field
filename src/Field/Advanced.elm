@@ -1,7 +1,7 @@
 module Field.Advanced exposing
     ( Field
     , Type
-    , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt, customInt
+    , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt
     , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
     , bool, true, false, customSubsetOfBool
     , CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
@@ -15,7 +15,7 @@ module Field.Advanced exposing
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
     , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
     , toRawString, toString, toMaybe, toResult, toType
-    , State, Raw(..), toState
+    , State, toState
     , Validation, toValidation
     , Converters, typeToConverters, toConverters
     , applyMaybe, applyResult
@@ -45,10 +45,12 @@ module Field.Advanced exposing
 
 # Primitive
 
+Elm's primitive types: `Int`, `Float`, `Bool`, `Char`, and `String`, all have corresponding field types.
+
 
 # Int
 
-@docs int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt, customInt
+@docs int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt
 
 
 # Float
@@ -108,7 +110,7 @@ TODO: Explain about empty and blank strings.
 
 # State
 
-@docs State, Raw, toState
+@docs State, toState
 
 
 # Validation
@@ -156,7 +158,7 @@ import Validation as V
 -- FIELD
 
 
-{-| A `Field` is a data structure that knows how to go from a `String` to an `a`. Any errors, `e`, can be accumulated over time.
+{-| A `Field` is a data structure that knows how to go from a `String` to an `a` and back to a `String`. Any errors, `e`, can be accumulated over time.
 -}
 type Field e a
     = Field (Converters e a) (State e a)
@@ -164,29 +166,20 @@ type Field e a
 
 {-| The internal state of a `Field`.
 
-It contains the unprocessed string in `raw` and the result of parsing the unprocessed string in `processed`. The result is stored
-as a `Validation` so that any errors can be accumulated over time.
+`raw` contains the unprocessed string.
+
+`processed` contains the result of parsing `raw`. `processed` is a `Validation` so that any errors can be accumulated over time.
+
+`clean` indicates whether or not the `Field` is considered **clean** or **dirty**. A `Field` is **clean** if it has never been changed,
+via one of `setFromString`, `setFromValue`, `setError`, `setErrors`, `setCustomError`, or `setCustomErrors`, after initially creating it.
+Otherwise, the `Field` is considered to be **dirty**.
 
 -}
 type alias State e a =
-    { raw : Raw
+    { raw : String
     , processed : Validation e a
+    , clean : Bool
     }
-
-
-{-| A raw string can be categorized as either **clean** or **dirty**.
-
-A **clean raw string** is one that has never been changed after initially setting it on the field whereas a **dirty raw string** is one
-that has been changed one or more times.
-
-**FIXME:** This doesn't quite make sense. Since with a clean string we can still have a dirty field because the processed value has changed.
-Maybe we need to store a `Bool` in the state, called `clean`, that is `True` if the field hasn't changed since initialization and is `False`
-if it has changed since initialization.
-
--}
-type Raw
-    = Clean String
-    | Dirty String
 
 
 {-| Re-export the `Validation` type for convenience.
@@ -199,12 +192,37 @@ type alias Validation e a =
 -- TYPE
 
 
-{-| -}
+{-| A `Type` represents the type of a `Field`. It determines how a `String` is converted to a type `a`.
+Conversion is error prone, so any errors that are encountered during conversion are of type `e`.
+-}
 type Type e a
     = Type (Converters e a)
 
 
-{-| -}
+{-| The collection of conversion functions that comprise a `Type`. It's useful for building new field types
+from existing field types.
+
+    import Field.Advanced as F exposing (Error, Type)
+
+    type Positive
+        = Positive Int
+
+    fromString : String -> Result (Error e) Positive
+    fromString =
+        (F.typeToConverters F.positiveInt).fromString >> Result.map Positive
+
+    toString : Positive -> String
+    toString (Positive p) =
+        (F.typeToConverters F.positiveInt).toString p
+
+    fieldType : Type (Error e) Positive
+    fieldType =
+        F.customType
+            { fromString = fromString
+            , toString = toString
+            }
+
+-}
 type alias Converters e a =
     { fromString : String -> Result e a
     , fromValue : a -> Result e a
@@ -216,55 +234,58 @@ type alias Converters e a =
 -- TYPE: INT
 
 
-{-| -}
+{-| Any `Int`.
+-}
 int : Type (Error e) Int
 int =
     subsetOfInt (always True)
 
 
-{-| -}
+{-| Any `Int`, `n`, such that `n >= 0`.
+-}
 nonNegativeInt : Type (Error e) Int
 nonNegativeInt =
     subsetOfInt ((<=) 0)
 
 
-{-| -}
+{-| Any `Int`, `n`, such that `n > 0`.
+-}
 positiveInt : Type (Error e) Int
 positiveInt =
     subsetOfInt ((<) 0)
 
 
-{-| -}
+{-| Any `Int`, `n`, such that `n <= 0`.
+-}
 nonPositiveInt : Type (Error e) Int
 nonPositiveInt =
     subsetOfInt ((>=) 0)
 
 
-{-| -}
+{-| Any `Int`, `n`, such that `n < 0`.
+-}
 negativeInt : Type (Error e) Int
 negativeInt =
     subsetOfInt ((>) 0)
 
 
-{-| -}
+{-| Any `Int`, `n`, such that `isGood n` is `True`.
+-}
 subsetOfInt : (Int -> Bool) -> Type (Error e) Int
 subsetOfInt =
     customSubsetOfInt
         { blank = Blank
         , syntaxError = SyntaxError
-        , validationError = ValidationError << String.fromInt
+        , validationError = ValidationError
         }
 
 
-{-| -}
+{-| Similar to `subsetOfInt` but you can customize the errors.
+-}
 customSubsetOfInt :
     { blank : e
     , syntaxError : String -> e
-
-    --
-    -- I think validationError should take a String rather than an Int. Same for the other functions.
-    --
-    , validationError : Int -> e
+    , validationError : String -> e
     }
     -> (Int -> Bool)
     -> Type e Int
@@ -278,11 +299,10 @@ customSubsetOfInt errors isGood =
                 Ok n
 
             else
-                Err (errors.validationError n)
+                Err (errors.validationError <| String.fromInt n)
         )
 
 
-{-| -}
 customInt :
     { blank : e
     , syntaxError : String -> e
@@ -846,11 +866,12 @@ empty tipe =
 
 {-| -}
 fromString : Type e a -> String -> Field e a
-fromString (Type converters) s =
+fromString (Type converters) raw =
     Field
         converters
-        { raw = Clean s
-        , processed = V.fromResult (converters.fromString s)
+        { raw = raw
+        , processed = V.fromResult (converters.fromString raw)
+        , clean = True
         }
 
 
@@ -859,8 +880,9 @@ fromValue : Type e a -> a -> Field e a
 fromValue (Type converters) value =
     Field
         converters
-        { raw = Clean (converters.toString value)
+        { raw = converters.toString value
         , processed = V.fromResult (converters.fromValue value)
+        , clean = True
         }
 
 
@@ -870,11 +892,12 @@ fromValue (Type converters) value =
 
 {-| -}
 setFromString : String -> Field e a -> Field e a
-setFromString s (Field converters state) =
+setFromString raw (Field converters state) =
     Field
         converters
-        { raw = Dirty s
-        , processed = V.fromResult (converters.fromString s)
+        { raw = raw
+        , processed = V.fromResult (converters.fromString raw)
+        , clean = False
         }
 
 
@@ -883,8 +906,9 @@ setFromValue : a -> Field e a -> Field e a
 setFromValue value (Field converters state) =
     Field
         converters
-        { raw = Dirty (converters.toString value)
+        { raw = converters.toString value
         , processed = V.fromResult (converters.fromValue value)
+        , clean = False
         }
 
 
@@ -893,8 +917,9 @@ setError : e -> Field e a -> Field e a
 setError error (Field converters state) =
     Field
         converters
-        { raw = Dirty (rawToString state.raw)
-        , processed = V.fail error
+        { state
+            | processed = V.fail error
+            , clean = False
         }
 
 
@@ -903,8 +928,9 @@ setErrors : e -> List e -> Field e a -> Field e a
 setErrors error restErrors (Field converters state) =
     Field
         converters
-        { raw = Dirty (rawToString state.raw)
-        , processed = V.failWithErrors error restErrors
+        { state
+            | processed = V.failWithErrors error restErrors
+            , clean = False
         }
 
 
@@ -927,7 +953,7 @@ setCustomErrors error restErrors =
 {-| -}
 isEmpty : Field e a -> Bool
 isEmpty (Field _ { raw }) =
-    String.isEmpty (rawToString raw)
+    String.isEmpty raw
 
 
 {-| -}
@@ -939,7 +965,7 @@ isNonEmpty =
 {-| -}
 isBlank : Field e a -> Bool
 isBlank (Field _ { raw }) =
-    String.isEmpty (String.trim (rawToString raw))
+    String.isEmpty (String.trim raw)
 
 
 {-| -}
@@ -950,13 +976,8 @@ isNonBlank =
 
 {-| -}
 isClean : Field e a -> Bool
-isClean (Field _ { raw }) =
-    case raw of
-        Clean _ ->
-            True
-
-        Dirty _ ->
-            False
+isClean (Field _ { clean }) =
+    clean
 
 
 {-| -}
@@ -984,17 +1005,7 @@ isInvalid =
 {-| -}
 toRawString : Field e a -> String
 toRawString (Field _ { raw }) =
-    rawToString raw
-
-
-rawToString : Raw -> String
-rawToString raw =
-    case raw of
-        Clean s ->
-            s
-
-        Dirty s ->
-            s
+    raw
 
 
 {-| -}
@@ -1268,6 +1279,7 @@ mapError f (Field converters state) =
         (mapConvertersError f converters)
         { raw = state.raw
         , processed = V.mapError f state.processed
+        , clean = state.clean
         }
 
 
