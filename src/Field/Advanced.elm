@@ -426,19 +426,22 @@ customFloat errors validate =
 -- TYPE: BOOL
 
 
-{-| -}
+{-| Any case-insensitive truthy or falsy string.
+-}
 bool : Type (Error e) Bool
 bool =
     subsetOfBool (always True)
 
 
-{-| -}
+{-| Any case-insensitive truthy string.
+-}
 true : Type (Error e) Bool
 true =
     subsetOfBool ((==) True)
 
 
-{-| -}
+{-| Any case-insensitive falsy string.
+-}
 false : Type (Error e) Bool
 false =
     subsetOfBool ((==) False)
