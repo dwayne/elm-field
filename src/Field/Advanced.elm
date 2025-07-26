@@ -158,7 +158,7 @@ import Validation as V
 -- FIELD
 
 
-{-| A `Field` is a data structure that knows how to go from a `String` to an `a` and back to a `String`. Any errors, `e`, can be accumulated over time.
+{-| It knows how to go from a `String` to a type `a` and back to a `String`. Any errors, `e`, can be accumulated over time.
 -}
 type Field e a
     = Field (Converters e a) (State e a)
@@ -192,7 +192,7 @@ type alias Validation e a =
 -- TYPE
 
 
-{-| A `Type` represents the type of a `Field`. It determines how a `String` is converted to a type `a`.
+{-| A representation for the type of a `Field`. It determines how a `String` is converted to a type `a` and back to a `String`.
 Conversion is error prone, so any errors that are encountered during conversion are of type `e`.
 -}
 type Type e a
