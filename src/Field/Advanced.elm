@@ -2,7 +2,7 @@ module Field.Advanced exposing
     ( Field
     , Type
     , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt, customSubsetOfInt
-    , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
+    , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat
     , bool, true, false, customSubsetOfBool
     , CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
     , char, subsetOfChar, customSubsetOfChar
@@ -55,7 +55,7 @@ Elm's primitive types: `Int`, `Float`, `Bool`, `Char`, and `String`, all have co
 
 # Float
 
-@docs float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat, customFloat
+@docs float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat, customSubsetOfFloat
 
 
 # Bool
@@ -280,7 +280,7 @@ subsetOfInt =
         }
 
 
-{-| Similar to `subsetOfInt` but you can customize the errors.
+{-| Similar to `subsetOfInt` but you get to customize the errors.
 -}
 customSubsetOfInt :
     { blank : e
@@ -330,37 +330,43 @@ customInt errors validate =
 -- TYPE: FLOAT
 
 
-{-| -}
+{-| Any `Float`.
+-}
 float : Type (Error e) Float
 float =
     subsetOfFloat (always True)
 
 
-{-| -}
+{-| Any `Float`, `f`, such that `f >= 0`.
+-}
 nonNegativeFloat : Type (Error e) Float
 nonNegativeFloat =
     subsetOfFloat ((<=) 0)
 
 
-{-| -}
+{-| Any `Float`, `f`, such that `f > 0`.
+-}
 positiveFloat : Type (Error e) Float
 positiveFloat =
     subsetOfFloat ((<) 0)
 
 
-{-| -}
+{-| Any `Float`, `f`, such that `f <= 0`.
+-}
 nonPositiveFloat : Type (Error e) Float
 nonPositiveFloat =
     subsetOfFloat ((>=) 0)
 
 
-{-| -}
+{-| Any `Float`, `f`, such that `f < 0`.
+-}
 negativeFloat : Type (Error e) Float
 negativeFloat =
     subsetOfFloat ((>) 0)
 
 
-{-| -}
+{-| Any `Float`, `f`, such that `isGood f` is `True`.
+-}
 subsetOfFloat : (Float -> Bool) -> Type (Error e) Float
 subsetOfFloat =
     customSubsetOfFloat
@@ -370,7 +376,8 @@ subsetOfFloat =
         }
 
 
-{-| -}
+{-| Similar to `subsetOfFloat` but you get to customize the errors.
+-}
 customSubsetOfFloat :
     { blank : e
     , syntaxError : String -> e
@@ -392,7 +399,6 @@ customSubsetOfFloat errors isGood =
         )
 
 
-{-| -}
 customFloat :
     { blank : e
     , syntaxError : String -> e
