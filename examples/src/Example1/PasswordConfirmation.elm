@@ -18,7 +18,7 @@ fromString =
     --
     -- Notice how I reuse fromString from the nonBlankString type.
     --
-    (F.typeToConversion F.nonBlankString).fromString >> Result.map PasswordConfirmation
+    (F.typeToConverters F.nonBlankString).fromString >> Result.map PasswordConfirmation
 
 
 toString : PasswordConfirmation -> String

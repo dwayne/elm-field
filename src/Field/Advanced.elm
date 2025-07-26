@@ -17,7 +17,7 @@ module Field.Advanced exposing
     , toRawString, toString, toMaybe, toResult, toType
     , State, Raw(..), toState
     , Validation, toValidation
-    , Conversion, typeToConversion, toConversion
+    , Converters, typeToConverters, toConverters
     , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
     , get, and, withDefault, andMaybe, andResult, andFinally
@@ -116,9 +116,9 @@ TODO: Explain about empty and blank strings.
 @docs Validation, toValidation
 
 
-# Conversion
+# Converters
 
-@docs Conversion, typeToConversion, toConversion
+@docs Converters, typeToConverters, toConverters
 
 
 # Applicative
@@ -159,7 +159,7 @@ import Validation as V
 {-| A `Field` is a data structure that knows how to go from a `String` to an `a`. Any errors, `e`, can be accumulated over time.
 -}
 type Field e a
-    = Field (Conversion e a) (State e a)
+    = Field (Converters e a) (State e a)
 
 
 {-| The internal state of a `Field`.
@@ -201,11 +201,11 @@ type alias Validation e a =
 
 {-| -}
 type Type e a
-    = Type (Conversion e a)
+    = Type (Converters e a)
 
 
 {-| -}
-type alias Conversion e a =
+type alias Converters e a =
     { fromString : String -> Result e a
     , fromValue : a -> Result e a
     , toString : a -> String
@@ -744,19 +744,19 @@ subsetOfType =
 
 {-| -}
 customSubsetOfType : (String -> e) -> (a -> Bool) -> Type e a -> Type e a
-customSubsetOfType toValidationError isGood (Type conversion) =
+customSubsetOfType toValidationError isGood (Type converters) =
     let
         validate x =
             if isGood x then
                 Ok x
 
             else
-                Err (toValidationError <| conversion.toString x)
+                Err (toValidationError <| converters.toString x)
     in
     Type
-        { fromString = conversion.fromString >> Result.andThen validate
-        , fromValue = conversion.fromValue >> Result.andThen validate
-        , toString = conversion.toString
+        { fromString = converters.fromString >> Result.andThen validate
+        , fromValue = converters.fromValue >> Result.andThen validate
+        , toString = converters.toString
         }
 
 
@@ -789,11 +789,11 @@ optional =
 
 {-| -}
 customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
-customOptional isBlankError (Type conversion) =
+customOptional isBlankError (Type converters) =
     Type
         { fromString =
             \s ->
-                case conversion.fromString s of
+                case converters.fromString s of
                     Ok value ->
                         Ok (Just value)
 
@@ -807,7 +807,7 @@ customOptional isBlankError (Type conversion) =
             \maybeValue ->
                 case maybeValue of
                     Just v1 ->
-                        case conversion.fromValue v1 of
+                        case converters.fromValue v1 of
                             Ok v2 ->
                                 Ok (Just v2)
 
@@ -820,7 +820,7 @@ customOptional isBlankError (Type conversion) =
 
                     Nothing ->
                         Ok Nothing
-        , toString = Maybe.map conversion.toString >> Maybe.withDefault ""
+        , toString = Maybe.map converters.toString >> Maybe.withDefault ""
         }
 
 
@@ -829,9 +829,9 @@ customOptional isBlankError (Type conversion) =
 
 
 {-| -}
-typeToConversion : Type e a -> Conversion e a
-typeToConversion (Type conversion) =
-    conversion
+typeToConverters : Type e a -> Converters e a
+typeToConverters (Type converters) =
+    converters
 
 
 
@@ -846,21 +846,21 @@ empty tipe =
 
 {-| -}
 fromString : Type e a -> String -> Field e a
-fromString (Type conversion) s =
+fromString (Type converters) s =
     Field
-        conversion
+        converters
         { raw = Clean s
-        , processed = V.fromResult (conversion.fromString s)
+        , processed = V.fromResult (converters.fromString s)
         }
 
 
 {-| -}
 fromValue : Type e a -> a -> Field e a
-fromValue (Type conversion) value =
+fromValue (Type converters) value =
     Field
-        conversion
-        { raw = Clean (conversion.toString value)
-        , processed = V.fromResult (conversion.fromValue value)
+        converters
+        { raw = Clean (converters.toString value)
+        , processed = V.fromResult (converters.fromValue value)
         }
 
 
@@ -870,29 +870,29 @@ fromValue (Type conversion) value =
 
 {-| -}
 setFromString : String -> Field e a -> Field e a
-setFromString s (Field conversion state) =
+setFromString s (Field converters state) =
     Field
-        conversion
+        converters
         { raw = Dirty s
-        , processed = V.fromResult (conversion.fromString s)
+        , processed = V.fromResult (converters.fromString s)
         }
 
 
 {-| -}
 setFromValue : a -> Field e a -> Field e a
-setFromValue value (Field conversion state) =
+setFromValue value (Field converters state) =
     Field
-        conversion
-        { raw = Dirty (conversion.toString value)
-        , processed = V.fromResult (conversion.fromValue value)
+        converters
+        { raw = Dirty (converters.toString value)
+        , processed = V.fromResult (converters.fromValue value)
         }
 
 
 {-| -}
 setError : e -> Field e a -> Field e a
-setError error (Field conversion state) =
+setError error (Field converters state) =
     Field
-        conversion
+        converters
         { raw = Dirty (rawToString state.raw)
         , processed = V.fail error
         }
@@ -900,9 +900,9 @@ setError error (Field conversion state) =
 
 {-| -}
 setErrors : e -> List e -> Field e a -> Field e a
-setErrors error restErrors (Field conversion state) =
+setErrors error restErrors (Field converters state) =
     Field
-        conversion
+        converters
         { raw = Dirty (rawToString state.raw)
         , processed = V.failWithErrors error restErrors
         }
@@ -1024,15 +1024,15 @@ toValidation (Field _ { processed }) =
 
 
 {-| -}
-toConversion : Field e a -> Conversion e a
-toConversion (Field conversion _) =
-    conversion
+toConverters : Field e a -> Converters e a
+toConverters (Field converters _) =
+    converters
 
 
 {-| -}
 toType : Field e a -> Type e a
-toType (Field conversion _) =
-    Type conversion
+toType (Field converters _) =
+    Type converters
 
 
 {-| -}
@@ -1257,38 +1257,38 @@ mapErrorType f error =
 
 {-| -}
 mapTypeError : (x -> y) -> Type x a -> Type y a
-mapTypeError f (Type conversion) =
-    Type (mapConversionError f conversion)
+mapTypeError f (Type converters) =
+    Type (mapConvertersError f converters)
 
 
 {-| -}
 mapError : (x -> y) -> Field x a -> Field y a
-mapError f (Field conversion state) =
+mapError f (Field converters state) =
     Field
-        (mapConversionError f conversion)
+        (mapConvertersError f converters)
         { raw = state.raw
         , processed = V.mapError f state.processed
         }
 
 
-mapConversionError : (x -> y) -> Conversion x a -> Conversion y a
-mapConversionError f conversion =
-    { fromString = conversion.fromString >> Result.mapError f
-    , fromValue = conversion.fromValue >> Result.mapError f
-    , toString = conversion.toString
+mapConvertersError : (x -> y) -> Converters x a -> Converters y a
+mapConvertersError f converters =
+    { fromString = converters.fromString >> Result.mapError f
+    , fromValue = converters.fromValue >> Result.mapError f
+    , toString = converters.toString
     }
 
 
 {-| -}
 fail : e -> Field e a -> Field e a
-fail error (Field conversion state) =
-    Field conversion { state | processed = V.fail error }
+fail error (Field converters state) =
+    Field converters { state | processed = V.fail error }
 
 
 {-| -}
 failWithErrors : e -> List e -> Field e a -> Field e a
-failWithErrors error restErrors (Field conversion state) =
-    Field conversion { state | processed = V.failWithErrors error restErrors }
+failWithErrors error restErrors (Field converters state) =
+    Field converters { state | processed = V.failWithErrors error restErrors }
 
 
 {-| -}

@@ -32,12 +32,12 @@ type Fahrenheit
 
 fromCelsius : String -> Result Error (Temperature Celsius)
 fromCelsius =
-    (F.typeToConversion F.float).fromString >> Result.andThen validate
+    (F.typeToConverters F.float).fromString >> Result.andThen validate
 
 
 fromFahrenheit : String -> Result Error (Temperature Fahrenheit)
 fromFahrenheit =
-    (F.typeToConversion F.float).fromString >> Result.andThen validate
+    (F.typeToConverters F.float).fromString >> Result.andThen validate
 
 
 low : Float

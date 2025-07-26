@@ -16,7 +16,7 @@ module Field exposing
     , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
     , toRawString, toString, toMaybe, toResult, toType
     , Validation, toValidation
-    , Conversion, typeToConversion, toConversion
+    , Converters, typeToConverters, toConverters
     , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
     , get, and, withDefault, andMaybe, andResult, andFinally
@@ -110,9 +110,9 @@ TODO: Explain about empty and blank strings.
 @docs Validation, toValidation
 
 
-# Conversion
+# Converters
 
-@docs Conversion, typeToConversion, toConversion
+@docs Converters, typeToConverters, toConverters
 
 
 # Applicative
@@ -181,8 +181,8 @@ type alias TypeString =
 
 
 {-| -}
-type alias Conversion e a =
-    F.Conversion e a
+type alias Converters e a =
+    F.Converters e a
 
 
 
@@ -417,9 +417,9 @@ optional =
 
 
 {-| -}
-typeToConversion : F.Type e a -> Conversion e a
-typeToConversion =
-    F.typeToConversion
+typeToConverters : F.Type e a -> Converters e a
+typeToConverters =
+    F.typeToConverters
 
 
 
@@ -631,9 +631,9 @@ toString =
 
 
 {-| -}
-toConversion : F.Field e a -> F.Conversion e a
-toConversion =
-    F.toConversion
+toConverters : F.Field e a -> F.Converters e a
+toConverters =
+    F.toConverters
 
 
 {-| -}
