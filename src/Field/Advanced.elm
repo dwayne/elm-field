@@ -158,7 +158,7 @@ import Validation as V
 -- FIELD
 
 
-{-| It knows how to go from a `String` to a type `a` and back to a `String`. Any errors, `e`, can be accumulated over time.
+{-| Tracks the raw `String` input and either the value of type `a` that the `String` represents or the errors of type `e` that can accumulate.
 -}
 type Field e a
     = Field (Converters e a) (State e a)
@@ -166,13 +166,13 @@ type Field e a
 
 {-| The internal state of a `Field`.
 
-`raw` contains the unprocessed string.
+`raw` contains the unprocessed `String` input.
 
-`processed` contains the result of parsing `raw`. `processed` is a `Validation` so that any errors can be accumulated over time.
+`processed` contains the result of parsing `raw`. Either it was successfully parsed into a type `a` or there were errors of type `e`.
 
-`clean` indicates whether or not the `Field` is considered **clean** or **dirty**. A `Field` is **clean** if it has never been changed,
-via one of `setFromString`, `setFromValue`, `setError`, `setErrors`, `setCustomError`, or `setCustomErrors`, after initially creating it.
-Otherwise, the `Field` is considered to be **dirty**.
+`clean` indicates whether or not the corresponding `Field` is considered to be **clean** or **dirty**. A `Field` is **clean** if it has
+never been changed, via one of `setFromString`, `setFromValue`, `setError`, `setErrors`, `setCustomError`, or `setCustomErrors`, after
+it was initially created. Otherwise, the `Field` is considered to be **dirty**.
 
 -}
 type alias State e a =
@@ -192,15 +192,15 @@ type alias Validation e a =
 -- TYPE
 
 
-{-| A representation for the type of a `Field`. It determines how a `String` is converted to a type `a` and back to a `String`.
-Conversion is error prone, so any errors that are encountered during conversion are of type `e`.
+{-| Represents the type information for a field. It specifies how a `String` is converted to a type `a`
+and back to a `String`. Conversion may result in errors of type `e`.
 -}
 type Type e a
     = Type (Converters e a)
 
 
-{-| The collection of conversion functions that comprise a `Type`. It's useful for building new field types
-from existing field types.
+{-| The collection of conversion functions that comprise a `Type`. The conversion functions are useful
+for building new field types from existing field types.
 
     import Field.Advanced as F exposing (Error, Type)
 
