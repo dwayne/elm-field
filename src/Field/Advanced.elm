@@ -362,7 +362,7 @@ subsetOfInt =
         }
 
 
-{-| Similar to `subsetOfInt` but you get to customize the errors.
+{-| Similar to [`subsetOfInt`](#subsetOfInt) but you get to customize the errors.
 -}
 customSubsetOfInt :
     { blankError : e
@@ -412,42 +412,128 @@ customInt errors validate =
 -- TYPE: FLOAT
 
 
-{-| Any `Float`.
+{-| Any `Float` that can be parsed from a trimmed string using `String.toFloat`.
+
+    (typeToConverters float).fromString "-0.1" == Ok -0.1
+
+    (typeToConverters float).fromString "0" == Ok 0
+
+    (typeToConverters float).fromString "1.1" == Ok 1.1
+
+    (typeToConverters float).fromString " 3.14 " == Ok 3.14
+
+    (typeToConverters float).fromString "" == Err blankError
+
+    (typeToConverters float).fromString "pi" == Err (syntaxError "pi")
+
 -}
 float : Type (Error e) Float
 float =
     subsetOfFloat (always True)
 
 
-{-| Any `Float`, `f`, such that `f >= 0`.
+{-| Any `Float`, `f`, that can be parsed from a trimmed string using `String.toFloat` such that `f >= 0`.
+
+    (typeToConverters nonNegativeFloat).fromString "-0.1" == Err (validationError "-0.1")
+
+    (typeToConverters nonNegativeFloat).fromString "0" == Ok 0
+
+    (typeToConverters nonNegativeFloat).fromString "1.1" == Ok 1.1
+
+    (typeToConverters nonNegativeFloat).fromString " 3.14 " == Ok 3.14
+
+    (typeToConverters nonNegativeFloat).fromString "" == Err blankError
+
+    (typeToConverters nonNegativeFloat).fromString "pi" == Err (syntaxError "pi")
+
 -}
 nonNegativeFloat : Type (Error e) Float
 nonNegativeFloat =
     subsetOfFloat ((<=) 0)
 
 
-{-| Any `Float`, `f`, such that `f > 0`.
+{-| Any `Float`, `f`, that can be parsed from a trimmed string using `String.toFloat` such that `f > 0`.
+
+    (typeToConverters positiveFloat).fromString "-0.1" == Err (validationError "-0.1")
+
+    (typeToConverters positiveFloat).fromString "0" == Err (validationError "0")
+
+    (typeToConverters positiveFloat).fromString "1.1" == Ok 1.1
+
+    (typeToConverters positiveFloat).fromString " 3.14 " == Ok 3.14
+
+    (typeToConverters positiveFloat).fromString "" == Err blankError
+
+    (typeToConverters positiveFloat).fromString "pi" == Err (syntaxError "pi")
+
 -}
 positiveFloat : Type (Error e) Float
 positiveFloat =
     subsetOfFloat ((<) 0)
 
 
-{-| Any `Float`, `f`, such that `f <= 0`.
+{-| Any `Float`, `f`, that can be parsed from a trimmed string using `String.toFloat` such that `f <= 0`.
+
+    (typeToConverters nonPositiveFloat).fromString "-0.1" == Ok -0.1
+
+    (typeToConverters nonPositiveFloat).fromString "0" == Ok 0
+
+    (typeToConverters nonPositiveFloat).fromString "1.1" == Err (validationError "1.1")
+
+    (typeToConverters nonPositiveFloat).fromString " 3.14 " == Err (validationError "3.14")
+
+    (typeToConverters nonPositiveFloat).fromString "" == Err blankError
+
+    (typeToConverters nonPositiveFloat).fromString "pi" == Err (syntaxError "pi")
+
 -}
 nonPositiveFloat : Type (Error e) Float
 nonPositiveFloat =
     subsetOfFloat ((>=) 0)
 
 
-{-| Any `Float`, `f`, such that `f < 0`.
+{-| Any `Float`, `f`, that can be parsed from a trimmed string using `String.toFloat` such that `f < 0`.
+
+    (typeToConverters negativeFloat).fromString "-0.1" == Ok -0.1
+
+    (typeToConverters negativeFloat).fromString "0" == Err (validationError "0")
+
+    (typeToConverters negativeFloat).fromString "1.1" == Err (validationError "1.1")
+
+    (typeToConverters negativeFloat).fromString " 3.14 " == Err (validationError "3.14")
+
+    (typeToConverters negativeFloat).fromString "" == Err blankError
+
+    (typeToConverters negativeFloat).fromString "pi" == Err (syntaxError "pi")
+
 -}
 negativeFloat : Type (Error e) Float
 negativeFloat =
     subsetOfFloat ((>) 0)
 
 
-{-| Any `Float`, `f`, such that `isGood f` is `True`.
+{-| Any `Float`, `f`, that can be parsed from a trimmed string using `String.toFloat` such that `isGood f` is `True`.
+
+    roundsToTwo = subsetOfFloat (round >> (==) 2)
+
+    (typeToConverters roundsToTwo).fromString "1.3" == Err (validationError "1.3")
+
+    (typeToConverters roundsToTwo).fromString "1.5" == Ok 1.5
+
+    (typeToConverters roundsToTwo).fromString "1.8" == Ok 1.8
+
+    (typeToConverters roundsToTwo).fromString "2.0" == Ok 2.0
+
+    (typeToConverters roundsToTwo).fromString "2.3" == Ok 2.3
+
+    (typeToConverters roundsToTwo).fromString "2.5" == Err (validationError "2.5")
+
+    (typeToConverters roundsToTwo).fromString "3.14" == Err (validationError "3.14")
+
+    (typeToConverters roundsToTwo).fromString "" == Err blankError
+
+    (typeToConverters roundsToTwo).fromString "pi" == Err (syntaxError "pi")
+
 -}
 subsetOfFloat : (Float -> Bool) -> Type (Error e) Float
 subsetOfFloat =
@@ -458,7 +544,7 @@ subsetOfFloat =
         }
 
 
-{-| Similar to `subsetOfFloat` but you get to customize the errors.
+{-| Similar to [`subsetOfFloat`](#subsetOfFloat) but you get to customize the errors.
 -}
 customSubsetOfFloat :
     { blank : e

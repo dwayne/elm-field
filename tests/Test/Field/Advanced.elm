@@ -16,6 +16,7 @@ primitiveSuite : Test
 primitiveSuite =
     describe "Primitive"
         [ intSuite
+        , floatSuite
         ]
 
 
@@ -86,6 +87,79 @@ intSuite =
                 , { raw = " 2 ", result = Ok 2 }
                 , { raw = "", result = Err F.blankError }
                 , { raw = "five", result = Err (F.syntaxError "five") }
+                ]
+        ]
+
+
+floatSuite : Test
+floatSuite =
+    describe "Float"
+        [ describe "float" <|
+            List.map
+                (testStringToValue F.float)
+                [ { raw = "-0.1", result = Ok -0.1 }
+                , { raw = "0", result = Ok 0 }
+                , { raw = "1.1", result = Ok 1.1 }
+                , { raw = " 3.14 ", result = Ok 3.14 }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "pi", result = Err (F.syntaxError "pi") }
+                ]
+        , describe "nonNegativeFloat" <|
+            List.map
+                (testStringToValue F.nonNegativeFloat)
+                [ { raw = "-0.1", result = Err (F.validationError "-0.1") }
+                , { raw = "0", result = Ok 0 }
+                , { raw = "1.1", result = Ok 1.1 }
+                , { raw = " 3.14 ", result = Ok 3.14 }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "pi", result = Err (F.syntaxError "pi") }
+                ]
+        , describe "positiveFloat" <|
+            List.map
+                (testStringToValue F.positiveFloat)
+                [ { raw = "-0.1", result = Err (F.validationError "-0.1") }
+                , { raw = "0", result = Err (F.validationError "0") }
+                , { raw = "1.1", result = Ok 1.1 }
+                , { raw = " 3.14 ", result = Ok 3.14 }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "pi", result = Err (F.syntaxError "pi") }
+                ]
+        , describe "nonPositiveFloat" <|
+            List.map
+                (testStringToValue F.nonPositiveFloat)
+                [ { raw = "-0.1", result = Ok -0.1 }
+                , { raw = "0", result = Ok 0 }
+                , { raw = "1.1", result = Err (F.validationError "1.1") }
+                , { raw = " 3.14 ", result = Err (F.validationError "3.14") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "pi", result = Err (F.syntaxError "pi") }
+                ]
+        , describe "negativeFloat" <|
+            List.map
+                (testStringToValue F.negativeFloat)
+                [ { raw = "-0.1", result = Ok -0.1 }
+                , { raw = "0", result = Err (F.validationError "0") }
+                , { raw = "1.1", result = Err (F.validationError "1.1") }
+                , { raw = " 3.14 ", result = Err (F.validationError "3.14") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "pi", result = Err (F.syntaxError "pi") }
+                ]
+        , describe "subsetOfFloat" <|
+            let
+                roundsToTwo =
+                    F.subsetOfFloat (round >> (==) 2)
+            in
+            List.map
+                (testStringToValue roundsToTwo)
+                [ { raw = "1.3", result = Err (F.validationError "1.3") }
+                , { raw = "1.5", result = Ok 1.5 }
+                , { raw = "1.8", result = Ok 1.8 }
+                , { raw = "2.0", result = Ok 2.0 }
+                , { raw = "2.3", result = Ok 2.3 }
+                , { raw = "2.5", result = Err (F.validationError "2.5") }
+                , { raw = " 3.14 ", result = Err (F.validationError "3.14") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "pi", result = Err (F.syntaxError "pi") }
                 ]
         ]
 
