@@ -234,47 +234,129 @@ type alias Converters e a =
 -- TYPE: INT
 
 
-{-| Any `Int`.
+{-| Any `Int` that can be parsed from a trimmed string using `String.toInt`.
+
+    (typeToConverters int).fromString "-1" == Ok -1
+
+    (typeToConverters int).fromString "0" == Ok 0
+
+    (typeToConverters int).fromString "1" == Ok 1
+
+    (typeToConverters int).fromString " 5 " == Ok 5
+
+    (typeToConverters int).fromString "" == Err blankError
+
+    (typeToConverters int).fromString "five" == Err (syntaxError "five")
+
 -}
 int : Type (Error e) Int
 int =
     subsetOfInt (always True)
 
 
-{-| Any `Int`, `n`, such that `n >= 0`.
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n >= 0`.
+
+    (typeToConverters nonNegativeInt).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters nonNegativeInt).fromString "0" == Ok 0
+
+    (typeToConverters nonNegativeInt).fromString "1" == Ok 1
+
+    (typeToConverters nonNegativeInt).fromString " 5 " == Ok 5
+
+    (typeToConverters nonNegativeInt).fromString "" == Err blankError
+
+    (typeToConverters nonNegativeInt).fromString "five" == Err (syntaxError "five")
+
 -}
 nonNegativeInt : Type (Error e) Int
 nonNegativeInt =
     subsetOfInt ((<=) 0)
 
 
-{-| Any `Int`, `n`, such that `n > 0`.
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n > 0`.
+
+    (typeToConverters positiveInt).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters positiveInt).fromString "0" == Err (validationError "0")
+
+    (typeToConverters positiveInt).fromString "1" == Ok 1
+
+    (typeToConverters positiveInt).fromString " 5 " == Ok 5
+
+    (typeToConverters positiveInt).fromString "" == Err blankError
+
+    (typeToConverters positiveInt).fromString "five" == Err (syntaxError "five")
+
 -}
 positiveInt : Type (Error e) Int
 positiveInt =
     subsetOfInt ((<) 0)
 
 
-{-| Any `Int`, `n`, such that `n <= 0`.
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n <= 0`.
+
+    (typeToConverters nonPositiveInt).fromString "-1" == Ok -1
+
+    (typeToConverters nonPositiveInt).fromString "0" == Ok 0
+
+    (typeToConverters nonPositiveInt).fromString "1" == Err (validationError "1")
+
+    (typeToConverters nonPositiveInt).fromString " 5 " == Err (validationError "5")
+
+    (typeToConverters nonPositiveInt).fromString "" == Err blankError
+
+    (typeToConverters nonPositiveInt).fromString "five" == Err (syntaxError "five")
+
 -}
 nonPositiveInt : Type (Error e) Int
 nonPositiveInt =
     subsetOfInt ((>=) 0)
 
 
-{-| Any `Int`, `n`, such that `n < 0`.
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n < 0`.
+
+    (typeToConverters negativeInt).fromString "-1" == Ok -1
+
+    (typeToConverters negativeInt).fromString "0" == Err (validationError "0")
+
+    (typeToConverters negativeInt).fromString "1" == Err (validationError "1")
+
+    (typeToConverters negativeInt).fromString " 5 " == Err (validationError "5")
+
+    (typeToConverters negativeInt).fromString "" == Err blankError
+
+    (typeToConverters negativeInt).fromString "five" == Err (syntaxError "five")
+
 -}
 negativeInt : Type (Error e) Int
 negativeInt =
     subsetOfInt ((>) 0)
 
 
-{-| Any `Int`, `n`, such that `isGood n` is `True`.
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `isGood n` is `True`.
+
+    evens = subsetOfInt (modBy 2 >> (==) 0)
+
+    (typeToConverters evens).fromString "-2" == Ok -2
+
+    (typeToConverters evens).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters evens).fromString "0" == Ok 0
+
+    (typeToConverters evens).fromString "1" == Err (validationError "1")
+
+    (typeToConverters evens).fromString " 2 " == Ok 2
+
+    (typeToConverters evens).fromString "" == Err blankError
+
+    (typeToConverters evens).fromString "five" == Err (syntaxError "five")
+
 -}
 subsetOfInt : (Int -> Bool) -> Type (Error e) Int
 subsetOfInt =
     customSubsetOfInt
-        { blank = Blank
+        { blankError = Blank
         , syntaxError = SyntaxError
         , validationError = ValidationError
         }
@@ -283,7 +365,7 @@ subsetOfInt =
 {-| Similar to `subsetOfInt` but you get to customize the errors.
 -}
 customSubsetOfInt :
-    { blank : e
+    { blankError : e
     , syntaxError : String -> e
     , validationError : String -> e
     }
@@ -291,7 +373,7 @@ customSubsetOfInt :
     -> Type e Int
 customSubsetOfInt errors isGood =
     customInt
-        { blank = errors.blank
+        { blankError = errors.blankError
         , syntaxError = errors.syntaxError
         }
         (\n ->
@@ -304,7 +386,7 @@ customSubsetOfInt errors isGood =
 
 
 customInt :
-    { blank : e
+    { blankError : e
     , syntaxError : String -> e
     }
     -> (Int -> Result e Int)
@@ -312,7 +394,7 @@ customInt :
 customInt errors validate =
     Type
         { fromString =
-            customTrim errors.blank
+            customTrim errors.blankError
                 (\s ->
                     case String.toInt s of
                         Just n ->
