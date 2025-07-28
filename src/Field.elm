@@ -320,7 +320,7 @@ defaultBoolToString =
 customSubsetOfBool : CustomBoolOptions -> (Bool -> Bool) -> Type Bool
 customSubsetOfBool =
     F.customSubsetOfBool
-        { blank = F.blankError
+        { blankError = F.blankError
         , syntaxError = F.syntaxError
         , validationError = F.validationError
         }

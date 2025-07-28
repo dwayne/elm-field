@@ -2,6 +2,7 @@ module Test.Field.Advanced exposing (suite)
 
 import Expect
 import Field.Advanced as F exposing (Error, Type)
+import Set
 import Test exposing (Test, describe, test)
 
 
@@ -17,6 +18,7 @@ primitiveSuite =
     describe "Primitive"
         [ intSuite
         , floatSuite
+        , boolSuite
         ]
 
 
@@ -164,11 +166,129 @@ floatSuite =
         ]
 
 
+boolSuite : Test
+boolSuite =
+    describe "Bool"
+        [ describe "bool" <|
+            List.map
+                (testStringToValue F.bool)
+                [ { raw = "true", result = Ok True }
+                , { raw = "TrUe", result = Ok True }
+                , { raw = "false", result = Ok False }
+                , { raw = "fAlSe", result = Ok False }
+                , { raw = " 1 ", result = Ok True }
+                , { raw = " 0 ", result = Ok False }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "not", result = Err (F.syntaxError "not") }
+                ]
+        , describe "true" <|
+            List.map
+                (testStringToValue F.true)
+                [ { raw = "true", result = Ok True }
+                , { raw = "TrUe", result = Ok True }
+                , { raw = "false", result = Err (F.validationError "false") }
+                , { raw = "fAlSe", result = Err (F.validationError "false") }
+                , { raw = " 1 ", result = Ok True }
+                , { raw = " 0 ", result = Err (F.validationError "false") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "not", result = Err (F.syntaxError "not") }
+                ]
+        , describe "false" <|
+            List.map
+                (testStringToValue F.false)
+                [ { raw = "true", result = Err (F.validationError "true") }
+                , { raw = "TrUe", result = Err (F.validationError "true") }
+                , { raw = "false", result = Ok False }
+                , { raw = "fAlSe", result = Ok False }
+                , { raw = " 1 ", result = Err (F.validationError "true") }
+                , { raw = " 0 ", result = Ok False }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "not", result = Err (F.syntaxError "not") }
+                ]
+        , describe "customSubsetOfBool" <|
+            let
+                subsetOfBool : (Bool -> Bool) -> Type MyError Bool
+                subsetOfBool =
+                    F.customSubsetOfBool
+                        { blankError = MyBlank
+                        , syntaxError = MySyntaxError
+                        , validationError = MyValidationError
+                        }
+                        { truthy = Set.fromList [ "#t" ]
+                        , falsy = Set.fromList [ "#f" ]
+                        , toString =
+                            \b ->
+                                if b then
+                                    "#t"
+
+                                else
+                                    "#f"
+                        , caseSensitive = True
+                        }
+
+                bool : Type MyError Bool
+                bool =
+                    subsetOfBool (always True)
+
+                true : Type MyError Bool
+                true =
+                    subsetOfBool ((==) True)
+
+                false : Type MyError Bool
+                false =
+                    subsetOfBool ((==) False)
+            in
+            [ describe "bool" <|
+                List.map
+                    (testStringToValue bool)
+                    [ { raw = "#t", result = Ok True }
+                    , { raw = "#T", result = Err (MySyntaxError "#T") }
+                    , { raw = "#f", result = Ok False }
+                    , { raw = "#F", result = Err (MySyntaxError "#F") }
+                    , { raw = " #t ", result = Ok True }
+                    , { raw = " #f ", result = Ok False }
+                    , { raw = "", result = Err MyBlank }
+                    , { raw = "not", result = Err (MySyntaxError "not") }
+                    ]
+            , describe "true" <|
+                List.map
+                    (testStringToValue true)
+                    [ { raw = "#t", result = Ok True }
+                    , { raw = "#T", result = Err (MySyntaxError "#T") }
+                    , { raw = "#f", result = Err (MyValidationError "#f") }
+                    , { raw = "#F", result = Err (MySyntaxError "#F") }
+                    , { raw = " #t ", result = Ok True }
+                    , { raw = " #f ", result = Err (MyValidationError "#f") }
+                    , { raw = "", result = Err MyBlank }
+                    , { raw = "not", result = Err (MySyntaxError "not") }
+                    ]
+            , describe "false" <|
+                List.map
+                    (testStringToValue false)
+                    [ { raw = "#t", result = Err (MyValidationError "#t") }
+                    , { raw = "#T", result = Err (MySyntaxError "#T") }
+                    , { raw = "#f", result = Ok False }
+                    , { raw = "#F", result = Err (MySyntaxError "#F") }
+                    , { raw = " #t ", result = Err (MyValidationError "#t") }
+                    , { raw = " #f ", result = Ok False }
+                    , { raw = "", result = Err MyBlank }
+                    , { raw = "not", result = Err (MySyntaxError "not") }
+                    ]
+            ]
+        ]
+
+
+type MyError
+    = MyBlank
+    | MySyntaxError String
+    | MyValidationError String
+
+
 testStringToValue :
-    Type (Error e) a
+    Type e a
     ->
         { raw : String
-        , result : Result (Error e) a
+        , result : Result e a
         }
     -> Test
 testStringToValue tipe { raw, result } =
