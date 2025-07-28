@@ -22,7 +22,7 @@ module Field.Advanced exposing
     , validate2, validate3, validate4, validate5
     , get, and, withDefault, andMaybe, andResult, andFinally
     , trim, customTrim
-    , Error, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
+    , Error, defaultErrors, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
     , mapTypeError
     , mapError
     , fail, failWithErrors
@@ -137,7 +137,7 @@ TODO: Explain about empty and blank strings.
 
 # Error
 
-@docs Error, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
+@docs Error, defaultErrors, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
 
 
 # Handle Errors
@@ -355,11 +355,7 @@ negativeInt =
 -}
 subsetOfInt : (Int -> Bool) -> Type (Error e) Int
 subsetOfInt =
-    customSubsetOfInt
-        { blankError = Blank
-        , syntaxError = SyntaxError
-        , validationError = ValidationError
-        }
+    customSubsetOfInt defaultErrors
 
 
 {-| Similar to [`subsetOfInt`](#subsetOfInt) but you get to customize the errors.
@@ -537,25 +533,21 @@ negativeFloat =
 -}
 subsetOfFloat : (Float -> Bool) -> Type (Error e) Float
 subsetOfFloat =
-    customSubsetOfFloat
-        { blank = Blank
-        , syntaxError = SyntaxError
-        , validationError = ValidationError << String.fromFloat
-        }
+    customSubsetOfFloat defaultErrors
 
 
 {-| Similar to [`subsetOfFloat`](#subsetOfFloat) but you get to customize the errors.
 -}
 customSubsetOfFloat :
-    { blank : e
+    { blankError : e
     , syntaxError : String -> e
-    , validationError : Float -> e
+    , validationError : String -> e
     }
     -> (Float -> Bool)
     -> Type e Float
 customSubsetOfFloat errors isGood =
     customFloat
-        { blank = errors.blank
+        { blankError = errors.blankError
         , syntaxError = errors.syntaxError
         }
         (\f ->
@@ -563,12 +555,12 @@ customSubsetOfFloat errors isGood =
                 Ok f
 
             else
-                Err (errors.validationError f)
+                Err (errors.validationError <| String.fromFloat f)
         )
 
 
 customFloat :
-    { blank : e
+    { blankError : e
     , syntaxError : String -> e
     }
     -> (Float -> Result e Float)
@@ -576,7 +568,7 @@ customFloat :
 customFloat errors validate =
     Type
         { fromString =
-            customTrim errors.blank
+            customTrim errors.blankError
                 (\s ->
                     case String.toFloat s of
                         Just f ->
@@ -669,10 +661,7 @@ false =
 subsetOfBool : (Bool -> Bool) -> Type (Error e) Bool
 subsetOfBool =
     customSubsetOfBool
-        { blankError = Blank
-        , syntaxError = SyntaxError
-        , validationError = ValidationError
-        }
+        defaultErrors
         defaultCustomBoolOptions
 
 
@@ -746,6 +735,16 @@ customBool :
     -> (Bool -> Result e Bool)
     -> Type e Bool
 customBool errors options validate =
+    let
+        ( truthy, falsy ) =
+            if options.caseSensitive then
+                ( options.truthy, options.falsy )
+
+            else
+                ( Set.map String.toLower options.truthy
+                , Set.map String.toLower options.falsy
+                )
+    in
     Type
         { fromString =
             customTrim errors.blankError
@@ -758,10 +757,10 @@ customBool errors options validate =
                             else
                                 String.toLower s
                     in
-                    if Set.member t options.truthy then
+                    if Set.member t truthy then
                         validate True
 
-                    else if Set.member t options.falsy then
+                    else if Set.member t falsy then
                         validate False
 
                     else
@@ -857,18 +856,14 @@ char =
 {-| -}
 subsetOfChar : (Char -> Bool) -> Type (Error e) Char
 subsetOfChar =
-    customSubsetOfChar
-        { blank = Blank
-        , syntaxError = SyntaxError
-        , validationError = ValidationError << String.fromChar
-        }
+    customSubsetOfChar defaultErrors
 
 
 {-| -}
 customSubsetOfChar :
-    { blank : e
+    { blankError : e
     , syntaxError : String -> e
-    , validationError : Char -> e
+    , validationError : String -> e
     }
     -> (Char -> Bool)
     -> Type e Char
@@ -879,7 +874,7 @@ customSubsetOfChar errors isGood =
                 Ok ch
 
             else
-                Err (errors.validationError ch)
+                Err (errors.validationError <| String.fromChar ch)
     in
     Type
         { fromString =
@@ -892,7 +887,7 @@ customSubsetOfChar errors isGood =
                         Err (errors.syntaxError s)
 
                     Nothing ->
-                        Err errors.blank
+                        Err errors.blankError
         , fromValue = validate
         , toString = String.fromChar
         }
@@ -1478,6 +1473,19 @@ type Error e
     | SyntaxError String -- A string that cannot be converted to the desired type, for e.g. "x" isn't an Int
     | ValidationError String -- A type that isn't in the subset of the type under consideration, for e.g. 1 is an Int but not an even Int
     | CustomError e -- A more specific type of validation error
+
+
+{-| -}
+defaultErrors :
+    { blankError : Error e
+    , syntaxError : String -> Error e
+    , validationError : String -> Error e
+    }
+defaultErrors =
+    { blankError = Blank
+    , syntaxError = SyntaxError
+    , validationError = ValidationError
+    }
 
 
 {-| -}

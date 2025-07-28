@@ -275,6 +275,35 @@ boolSuite =
                     , { raw = "not", result = Err (MySyntaxError "not") }
                     ]
             ]
+        , describe "case insensitivity" <|
+            let
+                subsetOfBool : (Bool -> Bool) -> Type (Error e) Bool
+                subsetOfBool =
+                    F.customSubsetOfBool
+                        F.defaultErrors
+                        { truthy = Set.fromList [ "TrUe" ]
+                        , falsy = Set.fromList [ "fAlSe" ]
+                        , toString = F.defaultBoolToString
+                        , caseSensitive = False
+                        }
+
+                bool : Type (Error e) Bool
+                bool =
+                    subsetOfBool (always True)
+            in
+            [ describe "bool" <|
+                List.map
+                    (testStringToValue bool)
+                    [ { raw = "true", result = Ok True }
+                    , { raw = "tRuE", result = Ok True }
+                    , { raw = "TrUe", result = Ok True }
+                    , { raw = " TRUE ", result = Ok True }
+                    , { raw = "false", result = Ok False }
+                    , { raw = "fAlSe", result = Ok False }
+                    , { raw = "FaLsE", result = Ok False }
+                    , { raw = " FALSE ", result = Ok False }
+                    ]
+            ]
         ]
 
 
