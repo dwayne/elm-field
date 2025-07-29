@@ -586,7 +586,7 @@ customFloat errors validate =
 -- TYPE: BOOL
 
 
-{-| Any case-insensitive [`defaultTruthy`](#defaultTruthy) or [`defaultFalsy`](#defaultFalsy) string.
+{-| Any case-insensitive [`defaultTruthy`](#defaultTruthy) or [`defaultFalsy`](#defaultFalsy) trimmed string.
 
     (typeToConverters bool).fromString "true" == Ok True
 
@@ -610,7 +610,7 @@ bool =
     subsetOfBool (always True)
 
 
-{-| Any case-insensitive [`defaultTruthy`](#defaultTruthy) string.
+{-| Any case-insensitive [`defaultTruthy`](#defaultTruthy) trimmed string.
 
     (typeToConverters true).fromString "true" == Ok True
 
@@ -634,7 +634,7 @@ true =
     subsetOfBool ((==) True)
 
 
-{-| Any case-insensitive [`defaultFalsy`](#defaultFalsy) string.
+{-| Any case-insensitive [`defaultFalsy`](#defaultFalsy) trimmed string.
 
     (typeToConverters false).fromString "true" == Err (validationError "true")
 
