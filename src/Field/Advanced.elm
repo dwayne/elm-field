@@ -847,19 +847,62 @@ defaultBoolToString b =
 -- TYPE: CHAR
 
 
-{-| -}
+{-| Any `Char` that can be parsed from a string of exactly length one.
+
+    (typeToConverters char).fromString "a" == Ok 'a'
+
+    (typeToConverters char).fromString "A" == Ok 'A'
+
+    (typeToConverters char).fromString "8" == Ok '8'
+
+    (typeToConverters char).fromString "\n" == Ok '\n'
+
+    (typeToConverters char).fromString "" == Err (syntaxError "")
+
+    (typeToConverters char).fromString " " == Ok ' '
+
+    (typeToConverters char).fromString "  " == Err (syntaxError "  ")
+
+    (typeToConverters char).fromString "aA" == Err (syntaxError "aA")
+
+    (typeToConverters char).fromString " 2 " == Err (syntaxError " 2 ")
+
+-}
 char : Type (Error e) Char
 char =
     subsetOfChar (always True)
 
 
-{-| -}
+{-| Any `Char`, `c`, that can be parsed from a string of exactly length one such that `isGood c` is `True`.
+
+    digit = subsetOfChar Char.isDigit
+
+    (typeToConverters digit).fromString "a" == Err (validationError "a")
+
+    (typeToConverters digit).fromString "A" == Err (validationError "A")
+
+    (typeToConverters digit).fromString "8" == Ok '8'
+
+    (typeToConverters digit).fromString "\n" == Err (validationError "\n")
+
+    (typeToConverters digit).fromString "" == Err (syntaxError "")
+
+    (typeToConverters digit).fromString " " == Err (validationError " ")
+
+    (typeToConverters digit).fromString "  " == Err (syntaxError "  ")
+
+    (typeToConverters digit).fromString "aA" == Err (syntaxError "aA")
+
+    (typeToConverters digit).fromString " 2 " == Err (syntaxError " 2 ")
+
+-}
 subsetOfChar : (Char -> Bool) -> Type (Error e) Char
 subsetOfChar =
     customSubsetOfChar defaultErrors
 
 
-{-| -}
+{-| Similar to [`subsetOfChar`](#subsetOfChar) but you get to customize the errors.
+-}
 customSubsetOfChar :
     { blankError : e
     , syntaxError : String -> e
@@ -883,11 +926,8 @@ customSubsetOfChar errors isGood =
                     Just ( ch, "" ) ->
                         validate ch
 
-                    Just _ ->
+                    _ ->
                         Err (errors.syntaxError s)
-
-                    Nothing ->
-                        Err errors.blankError
         , fromValue = validate
         , toString = String.fromChar
         }

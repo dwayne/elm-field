@@ -369,15 +369,7 @@ charSuite =
                 \s ->
                     F.fromString F.char s
                         |> F.toResult
-                        |> Expect.equal
-                            (Err
-                                [ if String.isEmpty s then
-                                    F.blankError
-
-                                  else
-                                    F.syntaxError s
-                                ]
-                            )
+                        |> Expect.equal (Err [ F.syntaxError s ])
             ]
         , describe "subsetOfChar"
             [ describe "digits"

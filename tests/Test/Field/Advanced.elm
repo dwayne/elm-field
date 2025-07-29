@@ -19,6 +19,7 @@ primitiveSuite =
         [ intSuite
         , floatSuite
         , boolSuite
+        , charSuite
         ]
 
 
@@ -311,6 +312,42 @@ type MyError
     = MyBlank
     | MySyntaxError String
     | MyValidationError String
+
+
+charSuite : Test
+charSuite =
+    describe "Char"
+        [ describe "char" <|
+            List.map
+                (testStringToValue F.char)
+                [ { raw = "a", result = Ok 'a' }
+                , { raw = "A", result = Ok 'A' }
+                , { raw = "8", result = Ok '8' }
+                , { raw = "\n", result = Ok '\n' }
+                , { raw = "", result = Err (F.syntaxError "") }
+                , { raw = " ", result = Ok ' ' }
+                , { raw = "  ", result = Err (F.syntaxError "  ") }
+                , { raw = "aA", result = Err (F.syntaxError "aA") }
+                , { raw = " 2 ", result = Err (F.syntaxError " 2 ") }
+                ]
+        , describe "subsetOfChar" <|
+            let
+                digit =
+                    F.subsetOfChar Char.isDigit
+            in
+            List.map
+                (testStringToValue digit)
+                [ { raw = "a", result = Err (F.validationError "a") }
+                , { raw = "A", result = Err (F.validationError "A") }
+                , { raw = "8", result = Ok '8' }
+                , { raw = "\n", result = Err (F.validationError "\n") }
+                , { raw = "", result = Err (F.syntaxError "") }
+                , { raw = " ", result = Err (F.validationError " ") }
+                , { raw = "  ", result = Err (F.syntaxError "  ") }
+                , { raw = "aA", result = Err (F.syntaxError "aA") }
+                , { raw = " 2 ", result = Err (F.syntaxError " 2 ") }
+                ]
+        ]
 
 
 testStringToValue :
