@@ -6,9 +6,9 @@ module Field.Advanced exposing
     , bool, true, false, customSubsetOfBool
     , CustomBoolOptions, defaultCustomBoolOptions, defaultTruthy, defaultFalsy, defaultBoolToString
     , char, subsetOfChar, customSubsetOfChar
-    , string, subsetOfString, customSubsetOfString, customString
-    , nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString, customNonEmptyString
-    , nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString, customNonBlankString
+    , string, subsetOfString, customSubsetOfString
+    , nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString
+    , nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString
     , subsetOfType, customSubsetOfType, customType
     , optional, customOptional
     , empty, fromString, fromValue
@@ -71,11 +71,15 @@ Elm's primitive types: `Int`, `Float`, `Bool`, `Char`, and `String`, all have co
 
 # String
 
-TODO: Explain about empty and blank strings.
+A **blank** string is either the empty string or a non-empty string consisting entirely of whitespace characters.
 
-@docs string, subsetOfString, customSubsetOfString, customString
-@docs nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString, customNonEmptyString
-@docs nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString, customNonBlankString
+The empty string: `""`
+
+Some blank strings: `""`, `" "`, `"  "`, `" \t "`, `"\n \t \r"`
+
+@docs string, subsetOfString, customSubsetOfString
+@docs nonEmptyString, subsetOfNonEmptyString, customSubsetOfNonEmptyString
+@docs nonBlankString, subsetOfNonBlankString, customSubsetOfNonBlankString
 
 
 # User-defined
@@ -847,7 +851,7 @@ defaultBoolToString b =
 -- TYPE: CHAR
 
 
-{-| Any `Char` that can be parsed from a string of exactly length one.
+{-| Any `Char` that can be parsed from a string of exactly length one. The string is not trimmed.
 
     (typeToConverters char).fromString "a" == Ok 'a'
 
@@ -857,11 +861,11 @@ defaultBoolToString b =
 
     (typeToConverters char).fromString "\n" == Ok '\n'
 
-    (typeToConverters char).fromString "" == Err (syntaxError "")
+    (typeToConverters char).fromString "" == Err blankError
 
     (typeToConverters char).fromString " " == Ok ' '
 
-    (typeToConverters char).fromString "  " == Err (syntaxError "  ")
+    (typeToConverters char).fromString "  " == Err blankError
 
     (typeToConverters char).fromString "aA" == Err (syntaxError "aA")
 
@@ -873,7 +877,7 @@ char =
     subsetOfChar (always True)
 
 
-{-| Any `Char`, `c`, that can be parsed from a string of exactly length one such that `isGood c` is `True`.
+{-| Any `Char`, `c`, that can be parsed from a string of exactly length one such that `isGood c` is `True`. The string is not trimmed.
 
     digit = subsetOfChar Char.isDigit
 
@@ -885,11 +889,11 @@ char =
 
     (typeToConverters digit).fromString "\n" == Err (validationError "\n")
 
-    (typeToConverters digit).fromString "" == Err (syntaxError "")
+    (typeToConverters digit).fromString "" == Err blankError
 
     (typeToConverters digit).fromString " " == Err (validationError " ")
 
-    (typeToConverters digit).fromString "  " == Err (syntaxError "  ")
+    (typeToConverters digit).fromString "  " == Err blankError
 
     (typeToConverters digit).fromString "aA" == Err (syntaxError "aA")
 
@@ -926,8 +930,16 @@ customSubsetOfChar errors isGood =
                     Just ( ch, "" ) ->
                         validate ch
 
-                    _ ->
-                        Err (errors.syntaxError s)
+                    Just _ ->
+                        Err <|
+                            if String.isEmpty (String.trim s) then
+                                errors.blankError
+
+                            else
+                                errors.syntaxError s
+
+                    Nothing ->
+                        Err errors.blankError
         , fromValue = validate
         , toString = String.fromChar
         }
@@ -937,69 +949,132 @@ customSubsetOfChar errors isGood =
 -- TYPE: STRING
 
 
-{-| -}
-string : Type Never String
+{-| Any `String` is trimmed and accepted. It never fails.
+
+    (typeToConverters string).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters string).fromString " Hello " == Ok "Hello"
+
+    (typeToConverters string).fromString "" == Ok ""
+
+    (typeToConverters string).fromString " \n\t " == Ok ""
+
+-}
+string : Type e String
 string =
-    --
-    -- Any string you give it is trimmed and returned.
-    --
-    customString (String.trim >> Ok)
+    customString Ok
 
 
+{-| Any `String`, `s`, is trimmed and only accepted if `isGood s` is `True`.
 
---
--- Empty string -> ""
--- Blank string -> "", " ", "  ", " \t ", "\n \t \r"
---
--- Blank includes the empty string as well as strings consisting entirely of whitespace characters.
---
+    atMost3 = subsetOfString (String.length >> (>=) 3)
+
+    (typeToConverters atMost3).fromString "p" == Ok "p"
+
+    (typeToConverters atMost3).fromString "pi" == Ok "pi"
+
+    (typeToConverters atMost3).fromString "pie" == Ok "pie"
+
+    (typeToConverters atMost3).fromString " pie " == Ok "pie"
+
+    (typeToConverters atMost3).fromString "Hello" == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString " Hello " == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString "" == Ok ""
+
+    (typeToConverters atMost3).fromString " \n\t " == Ok ""
+
+-}
+subsetOfString : (String -> Bool) -> Type (Error e) String
+subsetOfString =
+    customSubsetOfString ValidationError
 
 
-{-| -}
+{-| Similar to [`subsetOfString`](#subsetOfString) but you get to customize the validation error.
+-}
+customSubsetOfString : (String -> e) -> (String -> Bool) -> Type e String
+customSubsetOfString toValidationError =
+    customString << customValidateStringWith toValidationError
+
+
+customString : (String -> Result e String) -> Type e String
+customString f =
+    let
+        validate =
+            String.trim >> f
+    in
+    Type
+        { fromString = validate
+        , fromValue = validate
+        , toString = identity
+        }
+
+
+{-| Any `String` except the empty string is accepted. The string is not trimmed.
+
+    (typeToConverters nonEmptyString).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters nonEmptyString).fromString " Hello " == Ok " Hello "
+
+    (typeToConverters nonEmptyString).fromString "" == Err blankError
+
+    (typeToConverters nonEmptyString).fromString " \n\t " == Ok " \n\t "
+
+-}
 nonEmptyString : Type (Error e) String
 nonEmptyString =
-    --
-    -- Any string you give it is left alone. The only string it doesn't accept is the empty string.
-    --
-    -- If it trimmed the string then the non-empty blank strings
-    -- would coincide with the blank string, which we don't want.
-    --
-    -- This type makes a distinction between empty, non-empty blank strings, and non-blank strings.
-    --
     customNonEmptyString Blank Ok
 
 
-{-| -}
+{-| Any non-empty `String`, `s`, is only accepted if `isGood s` is `True`. The string is not trimmed.
+
+    hello = subsetOfNonEmptyString ((==) "Hello")
+
+    (typeToConverters hello).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters hello).fromString " Hello " == Err (validationError " Hello ")
+
+    (typeToConverters hello).fromString "" == Err blankError
+
+    (typeToConverters hello).fromString " \n\t " == Err (validationError " \n\t ")
+
+-}
 subsetOfNonEmptyString : (String -> Bool) -> Type (Error e) String
 subsetOfNonEmptyString =
     customSubsetOfNonEmptyString
-        { blank = Blank
+        { blankError = Blank
         , validationError = ValidationError
         }
 
 
-{-| -}
+{-| Similar to [`subsetOfNonEmptyString`](#subsetOfNonEmptyString) but you get to customize the errors.
+-}
 customSubsetOfNonEmptyString :
-    { blank : e
+    { blankError : e
     , validationError : String -> e
     }
     -> (String -> Bool)
     -> Type e String
 customSubsetOfNonEmptyString errors =
-    customNonEmptyString errors.blank << customValidateStringWith errors.validationError
+    customNonEmptyString errors.blankError << customValidateStringWith errors.validationError
 
 
-{-| -}
 customNonEmptyString : e -> (String -> Result e String) -> Type e String
-customNonEmptyString blank validate =
-    customString
-        (\s ->
+customNonEmptyString blank f =
+    let
+        validate s =
             if String.isEmpty s then
                 Err blank
 
             else
-                validate s
-        )
+                f s
+    in
+    Type
+        { fromString = validate
+        , fromValue = validate
+        , toString = identity
+        }
 
 
 {-| -}
@@ -1012,43 +1087,33 @@ nonBlankString =
 subsetOfNonBlankString : (String -> Bool) -> Type (Error e) String
 subsetOfNonBlankString =
     customSubsetOfNonBlankString
-        { blank = Blank
+        { blankError = Blank
         , validationError = ValidationError
         }
 
 
 {-| -}
 customSubsetOfNonBlankString :
-    { blank : e
+    { blankError : e
     , validationError : String -> e
     }
     -> (String -> Bool)
     -> Type e String
 customSubsetOfNonBlankString errors =
-    customNonBlankString errors.blank << customValidateStringWith errors.validationError
+    customNonBlankString errors.blankError << customValidateStringWith errors.validationError
 
 
-{-| -}
 customNonBlankString : e -> (String -> Result e String) -> Type e String
-customNonBlankString blank validate =
-    customString (customTrim blank validate)
-
-
-{-| -}
-subsetOfString : (String -> Bool) -> Type (Error e) String
-subsetOfString =
-    customSubsetOfString ValidationError
-
-
-{-| -}
-customSubsetOfString : (String -> e) -> (String -> Bool) -> Type e String
-customSubsetOfString toValidationError =
-    customString << customValidateStringWith toValidationError
-
-
-validateStringWith : (String -> Bool) -> String -> Result (Error e) String
-validateStringWith =
-    customValidateStringWith ValidationError
+customNonBlankString blank f =
+    let
+        validate =
+            customTrim blank f
+    in
+    Type
+        { fromString = validate
+        , fromValue = validate
+        , toString = identity
+        }
 
 
 customValidateStringWith : (String -> e) -> (String -> Bool) -> String -> Result e String
@@ -1058,16 +1123,6 @@ customValidateStringWith toValidationError isGood s =
 
     else
         Err (toValidationError s)
-
-
-{-| -}
-customString : (String -> Result e String) -> Type e String
-customString validate =
-    Type
-        { fromString = validate
-        , fromValue = validate
-        , toString = identity
-        }
 
 
 

@@ -369,7 +369,15 @@ charSuite =
                 \s ->
                     F.fromString F.char s
                         |> F.toResult
-                        |> Expect.equal (Err [ F.syntaxError s ])
+                        |> Expect.equal
+                            (Err
+                                [ if String.isEmpty s then
+                                    F.blankError
+
+                                  else
+                                    F.syntaxError s
+                                ]
+                            )
             ]
         , describe "subsetOfChar"
             [ describe "digits"
@@ -423,7 +431,7 @@ stringSuite =
                     \_ ->
                         F.fromString (F.subsetOfString ((==) "DELETE")) " \t "
                             |> F.toResult
-                            |> Expect.equal (Err [ F.validationError " \t " ])
+                            |> Expect.equal (Err [ F.validationError "" ])
                 ]
             ]
         , describe "nonEmptyString"

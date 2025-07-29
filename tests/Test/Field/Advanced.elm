@@ -20,6 +20,7 @@ primitiveSuite =
         , floatSuite
         , boolSuite
         , charSuite
+        , stringSuite
         ]
 
 
@@ -324,9 +325,9 @@ charSuite =
                 , { raw = "A", result = Ok 'A' }
                 , { raw = "8", result = Ok '8' }
                 , { raw = "\n", result = Ok '\n' }
-                , { raw = "", result = Err (F.syntaxError "") }
+                , { raw = "", result = Err F.blankError }
                 , { raw = " ", result = Ok ' ' }
-                , { raw = "  ", result = Err (F.syntaxError "  ") }
+                , { raw = "  ", result = Err F.blankError }
                 , { raw = "aA", result = Err (F.syntaxError "aA") }
                 , { raw = " 2 ", result = Err (F.syntaxError " 2 ") }
                 ]
@@ -341,11 +342,61 @@ charSuite =
                 , { raw = "A", result = Err (F.validationError "A") }
                 , { raw = "8", result = Ok '8' }
                 , { raw = "\n", result = Err (F.validationError "\n") }
-                , { raw = "", result = Err (F.syntaxError "") }
+                , { raw = "", result = Err F.blankError }
                 , { raw = " ", result = Err (F.validationError " ") }
-                , { raw = "  ", result = Err (F.syntaxError "  ") }
+                , { raw = "  ", result = Err F.blankError }
                 , { raw = "aA", result = Err (F.syntaxError "aA") }
                 , { raw = " 2 ", result = Err (F.syntaxError " 2 ") }
+                ]
+        ]
+
+
+stringSuite : Test
+stringSuite =
+    describe "String"
+        [ describe "string" <|
+            List.map
+                (testStringToValue F.string)
+                [ { raw = "Hello", result = Ok "Hello" }
+                , { raw = " Hello ", result = Ok "Hello" }
+                , { raw = "", result = Ok "" }
+                , { raw = " \n\t ", result = Ok "" }
+                ]
+        , describe "subsetOfString" <|
+            let
+                atMost3 =
+                    F.subsetOfString (String.length >> (>=) 3)
+            in
+            List.map
+                (testStringToValue atMost3)
+                [ { raw = "p", result = Ok "p" }
+                , { raw = "pi", result = Ok "pi" }
+                , { raw = "pie", result = Ok "pie" }
+                , { raw = " pie ", result = Ok "pie" }
+                , { raw = "Hello", result = Err (F.validationError "Hello") }
+                , { raw = " Hello ", result = Err (F.validationError "Hello") }
+                , { raw = "", result = Ok "" }
+                , { raw = " \n\t ", result = Ok "" }
+                ]
+        , describe "nonEmptyString" <|
+            List.map
+                (testStringToValue F.nonEmptyString)
+                [ { raw = "Hello", result = Ok "Hello" }
+                , { raw = " Hello ", result = Ok " Hello " }
+                , { raw = "", result = Err F.blankError }
+                , { raw = " \n\t ", result = Ok " \n\t " }
+                ]
+        , describe "subsetOfNonEmptyString" <|
+            let
+                hello =
+                    F.subsetOfNonEmptyString ((==) "Hello")
+            in
+            List.map
+                (testStringToValue hello)
+                [ { raw = "Hello", result = Ok "Hello" }
+                , { raw = " Hello ", result = Err (F.validationError " Hello ") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = " \n\t ", result = Err (F.validationError " \n\t ") }
                 ]
         ]
 
