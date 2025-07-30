@@ -10,6 +10,7 @@ suite : Test
 suite =
     describe "Field.Advanced"
         [ primitiveSuite
+        , userDefinedSuite
         ]
 
 
@@ -423,6 +424,56 @@ stringSuite =
                 , { raw = " \n\t ", result = Err F.blankError }
                 ]
         ]
+
+
+userDefinedSuite : Test
+userDefinedSuite =
+    describe "User-defined"
+        [ describe "subsetOfType" <|
+            let
+                positiveEvens =
+                    F.subsetOfType (modBy 2 >> (==) 0) F.positiveInt
+            in
+            List.map
+                (testStringToValue positiveEvens)
+                [ { raw = " 2 ", result = Ok 2 }
+                , { raw = "-2", result = Err (F.validationError "-2") }
+                , { raw = "-1", result = Err (F.validationError "-1") }
+                , { raw = "0", result = Err (F.validationError "0") }
+                , { raw = "1", result = Err (F.validationError "1") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = "five", result = Err (F.syntaxError "five") }
+                ]
+        , describe "customType" <|
+            List.map
+                (testStringToValue email)
+                [ { raw = "a@b.c", result = Ok (Email "a@b.c") }
+                , { raw = " a@b.c ", result = Ok (Email "a@b.c") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = " ab.c ", result = Err (F.syntaxError "ab.c") }
+                ]
+        ]
+
+
+type Email
+    = Email String
+
+
+email : Type (Error e) Email
+email =
+    F.customType
+        { fromString =
+            F.trim
+                (\s ->
+                    if s |> String.contains "@" then
+                        Ok (Email s)
+
+                    else
+                        Err (F.syntaxError s)
+                )
+        , toString =
+            \(Email s) -> s
+        }
 
 
 testStringToValue :
