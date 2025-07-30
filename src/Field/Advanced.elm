@@ -94,6 +94,8 @@ Some blank strings: `""`, `" "`, `"  "`, `" \t "`, `"\n \t \r"`
 
 # Construct
 
+All newly constructed fields are clean.
+
 @docs empty, fromString, fromValue
 
 
@@ -1318,13 +1320,21 @@ customOptional isBlankError (Type converters) =
 -- CONSTRUCT
 
 
-{-| -}
+{-| Initialize a new field from the given type and the empty string.
+
+    empty t == fromString t ""
+
+-}
 empty : Type e a -> Field e a
 empty tipe =
     fromString tipe ""
 
 
-{-| -}
+{-| Initialize a new field from the given type and string.
+
+    toMaybe (fromString bool "enabled") == Just True
+
+-}
 fromString : Type e a -> String -> Field e a
 fromString (Type converters) raw =
     Field
@@ -1335,7 +1345,11 @@ fromString (Type converters) raw =
         }
 
 
-{-| -}
+{-| Initialize a new field from the given type and value.
+
+    toMaybe (fromValue char 'a') == Just 'a'
+
+-}
 fromValue : Type e a -> a -> Field e a
 fromValue (Type converters) value =
     Field
