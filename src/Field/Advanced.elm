@@ -101,6 +101,8 @@ All newly constructed fields are clean.
 
 # Change
 
+Any change to a field using one of these set functions makes the field dirty.
+
 @docs setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
 
 
