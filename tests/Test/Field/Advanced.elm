@@ -11,6 +11,7 @@ suite =
     describe "Field.Advanced"
         [ primitiveSuite
         , userDefinedSuite
+        , optionalSuite
         ]
 
 
@@ -474,6 +475,26 @@ email =
         , toString =
             \(Email s) -> s
         }
+
+
+optionalSuite : Test
+optionalSuite =
+    describe "Optional"
+        [ describe "optional" <|
+            let
+                maybePositiveInt =
+                    F.optional F.positiveInt
+            in
+            List.map
+                (testStringToValue maybePositiveInt)
+                [ { raw = "-1", result = Err (F.validationError "-1") }
+                , { raw = "0", result = Err (F.validationError "0") }
+                , { raw = "1", result = Ok (Just 1) }
+                , { raw = " 5 ", result = Ok (Just 5) }
+                , { raw = "", result = Ok Nothing }
+                , { raw = "five", result = Err (F.syntaxError "five") }
+                ]
+        ]
 
 
 testStringToValue :

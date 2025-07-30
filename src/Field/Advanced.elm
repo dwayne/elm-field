@@ -234,6 +234,12 @@ type alias Converters e a =
     }
 
 
+{-| -}
+typeToConverters : Type e a -> Converters e a
+typeToConverters (Type converters) =
+    converters
+
+
 
 -- TYPE: INT
 
@@ -1248,16 +1254,30 @@ customType options =
 -- TYPE: OPTIONAL
 
 
-{-| -}
+{-| Make any field type optional.
+
+    maybePositiveInt = optional positiveInt
+
+    (typeToConverters maybePositiveInt).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters maybePositiveInt).fromString "0" == Err (validationError "0")
+
+    (typeToConverters maybePositiveInt).fromString "1" == Ok (Just 1)
+
+    (typeToConverters maybePositiveInt).fromString " 5 " == Ok (Just 5)
+
+    (typeToConverters maybePositiveInt).fromString "" == Ok Nothing
+
+    (typeToConverters maybePositiveInt).fromString "five" == Err (syntaxError "five")
+
+-}
 optional : Type (Error e) a -> Type (Error e) (Maybe a)
 optional =
-    --
-    -- I don't think it would be wise to use optional with string fields.
-    --
     customOptional ((==) Blank)
 
 
-{-| -}
+{-| Similar to [`optional`](#optional) but you get to customize the blank error check.
+-}
 customOptional : (e -> Bool) -> Type e a -> Type e (Maybe a)
 customOptional isBlankError (Type converters) =
     Type
@@ -1292,16 +1312,6 @@ customOptional isBlankError (Type converters) =
                         Ok Nothing
         , toString = Maybe.map converters.toString >> Maybe.withDefault ""
         }
-
-
-
--- TYPE: CONVERT
-
-
-{-| -}
-typeToConverters : Type e a -> Converters e a
-typeToConverters (Type converters) =
-    converters
 
 
 
