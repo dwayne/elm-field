@@ -1077,13 +1077,43 @@ customNonEmptyString blank f =
         }
 
 
-{-| -}
+{-| Any non-blank `String` is trimmed and accepted.
+
+    (typeToConverters nonBlankString).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters nonBlankString).fromString " Hello " == Ok "Hello"
+
+    (typeToConverters nonBlankString).fromString "" == Err blankError
+
+    (typeToConverters nonBlankString).fromString " \n\t " == Err blankError
+
+-}
 nonBlankString : Type (Error e) String
 nonBlankString =
     customString (trim Ok)
 
 
-{-| -}
+{-| Any non-blank `String`, `s`, is trimmed and only accepted if `isGood s` is `True`.
+
+    atMost3 = subsetOfNonBlankString (String.length >> (>=) 3)
+
+    (typeToConverters atMost3).fromString "p" == Ok "p"
+
+    (typeToConverters atMost3).fromString "pi" == Ok "pi"
+
+    (typeToConverters atMost3).fromString "pie" == Ok "pie"
+
+    (typeToConverters atMost3).fromString " pie " == Ok "pie"
+
+    (typeToConverters atMost3).fromString "Hello" == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString " Hello " == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString "" == Err blankError
+
+    (typeToConverters atMost3).fromString " \n\t " == Err blankError
+
+-}
 subsetOfNonBlankString : (String -> Bool) -> Type (Error e) String
 subsetOfNonBlankString =
     customSubsetOfNonBlankString
@@ -1092,7 +1122,8 @@ subsetOfNonBlankString =
         }
 
 
-{-| -}
+{-| Similar to [`subsetOfNonBlankString`](#subsetOfNonBlankString) but you get to customize the errors.
+-}
 customSubsetOfNonBlankString :
     { blankError : e
     , validationError : String -> e

@@ -398,6 +398,30 @@ stringSuite =
                 , { raw = "", result = Err F.blankError }
                 , { raw = " \n\t ", result = Err (F.validationError " \n\t ") }
                 ]
+        , describe "nonBlankString" <|
+            List.map
+                (testStringToValue F.nonBlankString)
+                [ { raw = "Hello", result = Ok "Hello" }
+                , { raw = " Hello ", result = Ok "Hello" }
+                , { raw = "", result = Err F.blankError }
+                , { raw = " \n\t ", result = Err F.blankError }
+                ]
+        , describe "subsetOfNonBlankString" <|
+            let
+                atMost3 =
+                    F.subsetOfNonBlankString (String.length >> (>=) 3)
+            in
+            List.map
+                (testStringToValue atMost3)
+                [ { raw = "p", result = Ok "p" }
+                , { raw = "pi", result = Ok "pi" }
+                , { raw = "pie", result = Ok "pie" }
+                , { raw = " pie ", result = Ok "pie" }
+                , { raw = "Hello", result = Err (F.validationError "Hello") }
+                , { raw = " Hello ", result = Err (F.validationError "Hello") }
+                , { raw = "", result = Err F.blankError }
+                , { raw = " \n\t ", result = Err F.blankError }
+                ]
         ]
 
 
