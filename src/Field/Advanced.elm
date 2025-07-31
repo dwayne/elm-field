@@ -175,9 +175,10 @@ type Field e a
 
 `processed` contains the result of parsing `raw`. Either it was successfully parsed into a type `a` or there were errors of type `e`.
 
-`clean` indicates whether or not the corresponding `Field` is considered to be **clean** or **dirty**. A `Field` is **clean** if it has
-never been changed, via one of `setFromString`, `setFromValue`, `setError`, `setErrors`, `setCustomError`, or `setCustomErrors`, after
-it was initially created. Otherwise, the `Field` is considered to be **dirty**.
+`clean` indicates whether or not the corresponding `Field` is considered to be **clean** or **dirty**.
+
+A `Field` is **clean** if it has never been changed, via one of `setFromString`, `setFromValue`, `setError`, `setErrors`, `setCustomError`,
+or `setCustomErrors`, after it was initially created. Otherwise, the `Field` is considered to be **dirty**.
 
 -}
 type alias State e a =
@@ -1473,9 +1474,11 @@ setCustomErrors error restErrors =
 -- QUERY
 
 
-{-|
+{-| Determine whether or not the raw string is equal to the empty string.
 
     isEmpty (empty int) == True
+
+    isEmpty (fromString int "   ") == False
 
     isEmpty (fromString int "1") == False
 
@@ -1485,9 +1488,11 @@ isEmpty (Field _ { raw }) =
     String.isEmpty raw
 
 
-{-|
+{-| `isNonEmpty f` is equivalent to `not (isEmpty f)`.
 
     isNonEmpty (empty int) == False
+
+    isNonEmpty (fromString int "   ") == True
 
     isNonEmpty (fromString int "1") == True
 
@@ -1497,7 +1502,7 @@ isNonEmpty =
     not << isEmpty
 
 
-{-|
+{-| Determine whether or not the raw string is equal to a blank string.
 
     isBlank (empty int) == True
 
@@ -1511,7 +1516,7 @@ isBlank (Field _ { raw }) =
     String.isEmpty (String.trim raw)
 
 
-{-|
+{-| `isNonBlank f` is equivalent to `not (isBlank f)`.
 
     isNonBlank (empty int) == False
 
@@ -1525,7 +1530,7 @@ isNonBlank =
     not << isBlank
 
 
-{-|
+{-| `True` if the field is [clean](#state).
 
     isClean (empty int) == True
 
@@ -1539,7 +1544,7 @@ isClean (Field _ { clean }) =
     clean
 
 
-{-|
+{-| `True` if the field is [dirty](#state). `isDirty f` is equivalent to `not (isClean f)`.
 
     isDirty (empty int) == False
 
@@ -1553,7 +1558,7 @@ isDirty =
     not << isClean
 
 
-{-|
+{-| `True` if the field does not have any errors.
 
     isValid (empty int) == False
 
@@ -1565,7 +1570,7 @@ isValid (Field _ { processed }) =
     V.isValid processed
 
 
-{-|
+{-| `True` if the field has errors. `isInvalid f` is equivalent to `not (isValid f)`.
 
     isInvalid (empty int) == True
 
