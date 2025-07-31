@@ -24,8 +24,6 @@ module Field exposing
     , Error, blankError, syntaxError, validationError, customError, errorToString
     , mapTypeError
     , mapError
-    , fail, failWithErrors
-    , prependError, appendError
     , firstError, lastError, allErrors
     )
 
@@ -136,8 +134,6 @@ TODO: Explain about empty and blank strings.
 
 @docs mapTypeError
 @docs mapError
-@docs fail, failWithErrors
-@docs prependError, appendError
 @docs firstError, lastError, allErrors
 
 -}
@@ -737,30 +733,6 @@ mapTypeError =
 mapError : (x -> y) -> F.Field x a -> F.Field y a
 mapError =
     F.mapError
-
-
-{-| -}
-fail : Error -> Field a -> Field a
-fail =
-    F.fail
-
-
-{-| -}
-failWithErrors : Error -> List Error -> Field a -> Field a
-failWithErrors =
-    F.failWithErrors
-
-
-{-| -}
-prependError : Error -> Field a -> Field a
-prependError =
-    F.prependError
-
-
-{-| -}
-appendError : Error -> Field a -> Field a
-appendError =
-    F.appendError
 
 
 {-| -}

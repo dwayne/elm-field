@@ -25,8 +25,6 @@ module Field.Advanced exposing
     , Error, defaultErrors, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
     , mapTypeError
     , mapError
-    , fail, failWithErrors
-    , prependError, appendError
     , firstError, lastError, allErrors
     )
 
@@ -101,7 +99,8 @@ All newly constructed fields are clean.
 
 # Change
 
-Any change to a field using one of these set functions makes the field dirty.
+Any change to a field using these setter functions makes the field dirty. Furthermore,
+these are the only functions that can dirty a field.
 
 @docs setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
 
@@ -152,8 +151,6 @@ Any change to a field using one of these set functions makes the field dirty.
 
 @docs mapTypeError
 @docs mapError
-@docs fail, failWithErrors
-@docs prependError, appendError
 @docs firstError, lastError, allErrors
 
 -}
@@ -1366,7 +1363,25 @@ fromValue (Type converters) value =
 -- CHANGE
 
 
-{-| -}
+{-|
+
+    field = empty positiveInt
+
+    toResult field == Err [ blankError ]
+
+    toResult (setFromString "-1" field) == Err [ validationError "-1" ]
+
+    toResult (setFromString "0" field) == Err [ validationError "0" ]
+
+    toResult (setFromString "1" field) == Ok 1
+
+    toResult (setFromString " 5 " field) == Ok 5
+
+    toResult (setFromString "   " field) == Err [ blankError ]
+
+    toResult (setFromString "five" field) == Err [ syntaxError "five" ]
+
+-}
 setFromString : String -> Field e a -> Field e a
 setFromString raw (Field converters state) =
     Field
@@ -1377,7 +1392,23 @@ setFromString raw (Field converters state) =
         }
 
 
-{-| -}
+{-|
+
+    field = empty (optional positiveInt)
+
+    toResult field == Ok Nothing
+
+    toResult (setFromValue (Just -1) field) == Err [ validationError "-1" ]
+
+    toResult (setFromValue (Just 0) field) == Err [ validationError "0" ]
+
+    toResult (setFromValue (Just 1) field) == Ok (Just 1)
+
+    toResult (setFromValue (Just 5) field) == Ok (Just 5)
+
+    toResult (setFromValue Nothing field) == Ok Nothing
+
+-}
 setFromValue : a -> Field e a -> Field e a
 setFromValue value (Field converters state) =
     Field
@@ -1388,7 +1419,15 @@ setFromValue value (Field converters state) =
         }
 
 
-{-| -}
+{-|
+
+    field = empty int
+
+    error = customError "Not an integer"
+
+    toResult (setError error field) == Err [ error ]
+
+-}
 setError : e -> Field e a -> Field e a
 setError error (Field converters state) =
     Field
@@ -1410,7 +1449,15 @@ setErrors error restErrors (Field converters state) =
         }
 
 
-{-| -}
+{-|
+
+    field = empty int
+
+    error = customError "Not an integer"
+
+    toResult (setCustomError "Not an integer" field) == Err [ error ]
+
+-}
 setCustomError : e -> Field (Error e) a -> Field (Error e) a
 setCustomError =
     setError << CustomError
@@ -1426,49 +1473,105 @@ setCustomErrors error restErrors =
 -- QUERY
 
 
-{-| -}
+{-|
+
+    isEmpty (empty int) == True
+
+    isEmpty (fromString int "1") == False
+
+-}
 isEmpty : Field e a -> Bool
 isEmpty (Field _ { raw }) =
     String.isEmpty raw
 
 
-{-| -}
+{-|
+
+    isNonEmpty (empty int) == False
+
+    isNonEmpty (fromString int "1") == True
+
+-}
 isNonEmpty : Field e a -> Bool
 isNonEmpty =
     not << isEmpty
 
 
-{-| -}
+{-|
+
+    isBlank (empty int) == True
+
+    isBlank (fromString int "   ") == True
+
+    isBlank (fromString int "1") == False
+
+-}
 isBlank : Field e a -> Bool
 isBlank (Field _ { raw }) =
     String.isEmpty (String.trim raw)
 
 
-{-| -}
+{-|
+
+    isNonBlank (empty int) == False
+
+    isNonBlank (fromString int "   ") == False
+
+    isNonBlank (fromString int "1") == True
+
+-}
 isNonBlank : Field e a -> Bool
 isNonBlank =
     not << isBlank
 
 
-{-| -}
+{-|
+
+    isClean (empty int) == True
+
+    isClean (fromString int "1") == True
+
+    isClean (setFromString "1" (empty int)) == False
+
+-}
 isClean : Field e a -> Bool
 isClean (Field _ { clean }) =
     clean
 
 
-{-| -}
+{-|
+
+    isDirty (empty int) == False
+
+    isDirty (fromString int "1") == False
+
+    isDirty (setFromString "1" (empty int)) == True
+
+-}
 isDirty : Field e a -> Bool
 isDirty =
     not << isClean
 
 
-{-| -}
+{-|
+
+    isValid (empty int) == False
+
+    isValid (fromString int "1") == True
+
+-}
 isValid : Field e a -> Bool
 isValid (Field _ { processed }) =
     V.isValid processed
 
 
-{-| -}
+{-|
+
+    isInvalid (empty int) == True
+
+    isInvalid (fromString int "1") == False
+
+-}
 isInvalid : Field e a -> Bool
 isInvalid =
     not << isValid
@@ -1478,13 +1581,25 @@ isInvalid =
 -- CONVERT
 
 
-{-| -}
+{-|
+
+    toRawString (empty int) == ""
+
+    toRawString (fromString int " \n5  \t \n") == " \n5  \t \n"
+
+-}
 toRawString : Field e a -> String
 toRawString (Field _ { raw }) =
     raw
 
 
-{-| -}
+{-|
+
+    toString (empty int) == ""
+
+    toString (fromString int " \n5  \t \n") == "5"
+
+-}
 toString : Field e a -> String
 toString (Field tipe { processed }) =
     processed
@@ -1492,13 +1607,25 @@ toString (Field tipe { processed }) =
         |> V.withDefault ""
 
 
-{-| -}
+{-|
+
+    toMaybe (empty int) == Nothing
+
+    toMaybe (fromString int "5") == Just 5
+
+-}
 toMaybe : Field e a -> Maybe a
 toMaybe =
     V.toMaybe << toValidation
 
 
-{-| -}
+{-|
+
+    toResult (empty int) == Err [ blankError ]
+
+    toResult (fromString int "5") == Ok 5
+
+-}
 toResult : Field e a -> Result (List e) a
 toResult =
     V.toResult << toValidation
@@ -1516,7 +1643,8 @@ toConverters (Field converters _) =
     converters
 
 
-{-| -}
+{-| Recover the type information for a field.
+-}
 toType : Field e a -> Type e a
 toType (Field converters _) =
     Type converters
@@ -1778,35 +1906,6 @@ mapConvertersError f converters =
     , fromValue = converters.fromValue >> Result.mapError f
     , toString = converters.toString
     }
-
-
-{-| -}
-fail : e -> Field e a -> Field e a
-fail error (Field converters state) =
-    Field converters { state | processed = V.fail error }
-
-
-{-| -}
-failWithErrors : e -> List e -> Field e a -> Field e a
-failWithErrors error restErrors (Field converters state) =
-    Field converters { state | processed = V.failWithErrors error restErrors }
-
-
-{-| -}
-prependError : e -> Field e a -> Field e a
-prependError newError field =
-    failWithErrors newError (allErrors field) field
-
-
-{-| -}
-appendError : e -> Field e a -> Field e a
-appendError newError field =
-    case allErrors field of
-        [] ->
-            fail newError field
-
-        error :: restErrors ->
-            failWithErrors error (restErrors ++ [ newError ]) field
 
 
 {-| -}
