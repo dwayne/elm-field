@@ -114,9 +114,10 @@ updatePasswordConfirmation passwordField passwordConfirmationField =
         else
             F.setCustomError "The password confirmation does not match." passwordConfirmationField
     )
-        |> F.get passwordField
-        |> F.and passwordConfirmationField
-        |> F.withDefault passwordConfirmationField
+        |> Just
+        |> F.applyMaybe passwordField
+        |> F.applyMaybe passwordConfirmationField
+        |> Maybe.withDefault passwordConfirmationField
 
 
 
@@ -128,7 +129,7 @@ validate fields =
     (\username password _ role ->
         Output username password role
     )
-        |> F.get (fields.username |> F.mapError UsernameError)
-        |> F.and (fields.password |> F.mapError PasswordError)
-        |> F.and (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
-        |> F.and (fields.role |> F.mapError RoleError)
+        |> F.succeed (fields.username |> F.mapError UsernameError)
+        |> F.applyValidation (fields.password |> F.mapError PasswordError)
+        |> F.applyValidation (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
+        |> F.applyValidation (fields.role |> F.mapError RoleError)

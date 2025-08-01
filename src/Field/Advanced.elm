@@ -18,9 +18,8 @@ module Field.Advanced exposing
     , State, toState
     , Validation, toValidation
     , Converters, typeToConverters, toConverters
-    , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
-    , get, and, withDefault, andMaybe, andResult, andFinally
+    , applyMaybe, applyResult, applyValidation, succeed, validationToResult
     , trim, customTrim
     , Error, defaultErrors, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
     , mapTypeError
@@ -130,11 +129,18 @@ these are the only functions that can dirty a field.
 @docs Converters, typeToConverters, toConverters
 
 
-# Applicative
+# Validate
 
-@docs applyMaybe, applyResult
 @docs validate2, validate3, validate4, validate5
-@docs get, and, withDefault, andMaybe, andResult, andFinally
+
+
+# Apply
+
+[`Field e`](#Field) is not applicative. However, `Maybe`, `Result e`, and `Validaton e` are all applicative.
+The functions below attempt to make it convenient to do an applicative style of programming with fields by
+leveraging the applicative nature of `Maybe`, `Result e`, and `Validation e`.
+
+@docs applyMaybe, applyResult, applyValidation, succeed, validationToResult
 
 
 # Helpers
@@ -1662,32 +1668,7 @@ toState (Field _ state) =
 
 
 
--- APPLICATIVE
-
-
-{-| -}
-applyMaybe : Field e a -> Maybe (a -> b) -> Maybe b
-applyMaybe field mf =
-    case ( toMaybe field, mf ) of
-        ( Just a, Just f ) ->
-            Just (f a)
-
-        _ ->
-            Nothing
-
-
-{-| -}
-applyResult : Field e a -> Result (List e) (a -> b) -> Result (List e) b
-applyResult field rf =
-    case ( toResult field, rf ) of
-        ( Ok a, Ok f ) ->
-            Ok (f a)
-
-        ( Err e1, _ ) ->
-            Err e1
-
-        ( _, Err e2 ) ->
-            Err e2
+-- VALIDATE
 
 
 {-| -}
@@ -1714,56 +1695,126 @@ validate5 f field1 field2 field3 field4 field5 =
     V.map5 f (toValidation field1) (toValidation field2) (toValidation field3) (toValidation field4) (toValidation field5)
 
 
-{-| -}
-get : Field e a -> (a -> b) -> Validation e b
-get field f =
-    V.map f (toValidation field)
+
+-- APPLY
 
 
-{-| -}
-and : Field e a -> Validation e (a -> b) -> Validation e b
-and field =
+{-| Suppose you want to use the values from multiple fields but you don't care about any of the
+errors that are present.
+
+    type Primitives
+        = Positive Int Float Bool Char String
+        | NonPositive Int Float Bool Char String
+
+    let
+        maybePrimitives =
+            (\n f b c s ->
+                if n > 0 then
+                    Positive n f b c s
+                else
+                    NonPositive n f b c s
+            )
+            |> Just
+            |> applyMaybe (fromString int "5")
+            |> applyMaybe (fromString float "3.14")
+            |> applyMaybe (fromValue bool True)
+            |> applyMaybe (fromValue char 'a')
+            |> applyMaybe (fromString string "Hello")
+    in
+    maybePrimitives == Just (Positive 5 3.14 True 'a' "Hello")
+
+-}
+applyMaybe : Field e a -> Maybe (a -> b) -> Maybe b
+applyMaybe field mf =
+    case ( toMaybe field, mf ) of
+        ( Just a, Just f ) ->
+            Just (f a)
+
+        _ ->
+            Nothing
+
+
+{-| Suppose you want to use the values from multiple fields and you only care about the
+first error that occurs.
+
+    type Primitives
+        = Positive Int Float Bool Char String
+        | NonPositive Int Float Bool Char String
+
+    let
+        resultPrimitives =
+            (\n f b c s ->
+                if n > 0 then
+                    Positive n f b c s
+                else
+                    NonPositive n f b c s
+            )
+            |> Ok
+            |> applyResult (fromString int "5")
+            |> applyResult (fromString float "pi")
+            |> applyResult (fromString bool "not")
+            |> applyResult (fromValue char 'a')
+            |> applyResult (fromString string "Hello")
+    in
+    resultPrimitives == Err [ syntaxError "pi" ]
+
+-}
+applyResult : Field e a -> Result (List e) (a -> b) -> Result (List e) b
+applyResult field rf =
+    case ( toResult field, rf ) of
+        ( Ok a, Ok f ) ->
+            Ok (f a)
+
+        ( _, Err e2 ) ->
+            --
+            -- Propagate the first error we find
+            --
+            Err e2
+
+        ( Err e1, _ ) ->
+            Err e1
+
+
+{-| Suppose you want to use the values from multiple fields and you care about all the
+errors that occur.
+
+    type Primitives
+        = Positive Int Float Bool Char String
+        | NonPositive Int Float Bool Char String
+
+    let
+        resultPrimitives =
+            (\n f b c s ->
+                if n > 0 then
+                    Positive n f b c s
+                else
+                    NonPositive n f b c s
+            )
+            |> succeed (fromString int "5")
+            |> applyValidation (fromString float "pi")
+            |> applyValidation (fromString bool "not")
+            |> applyValidation (fromValue char 'a')
+            |> applyValidation (fromString string "Hello")
+            |> validationToResult
+    in
+    resultPrimitives == Err [ syntaxError "pi", syntaxError "not" ]
+
+-}
+applyValidation : Field e a -> Validation e (a -> b) -> Validation e b
+applyValidation field =
     V.apply (toValidation field)
 
 
 {-| -}
-withDefault : a -> Validation e a -> a
-withDefault =
-    V.withDefault
+succeed : Field e a -> (a -> b) -> Validation e b
+succeed field f =
+    V.map f (toValidation field)
 
 
 {-| -}
-andMaybe : Validation e a -> Maybe a
-andMaybe =
-    andFinally
-        { onSuccess = Just
-        , onFailure = always Nothing
-        }
-
-
-{-| -}
-andResult : Validation e a -> Result (List e) a
-andResult =
-    andFinally
-        { onSuccess = Ok
-        , onFailure = Err
-        }
-
-
-{-| -}
-andFinally :
-    { onSuccess : a -> b
-    , onFailure : List e -> b
-    }
-    -> Validation e a
-    -> b
-andFinally { onSuccess, onFailure } validation =
-    case V.toResult validation of
-        Ok value ->
-            onSuccess value
-
-        Err errors ->
-            onFailure errors
+validationToResult : Validation e a -> Result (List e) a
+validationToResult =
+    V.toResult
 
 
 

@@ -148,9 +148,9 @@ setters =
 
                 maybeCheckOutIsAfterCheckIn =
                     Date.isAfter
-                        |> F.get fields.checkIn
-                        |> F.and checkOut
-                        |> F.andMaybe
+                        |> Just
+                        |> F.applyMaybe fields.checkIn
+                        |> F.applyMaybe checkOut
             in
             case maybeCheckOutIsAfterCheckIn of
                 Just False ->
@@ -176,10 +176,10 @@ validate fields =
             (Stay checkIn checkInTime (Date.nights checkIn checkOut))
             fields.subscribe
     )
-        |> F.get (fields.name |> F.mapError NameError)
-        |> F.and (fields.checkIn |> F.mapError CheckInError)
-        |> F.and (fields.checkInTime |> F.mapError CheckInTimeError)
-        |> F.and (fields.checkOut |> F.mapError CheckOutError)
+        |> F.succeed (fields.name |> F.mapError NameError)
+        |> F.applyValidation (fields.checkIn |> F.mapError CheckInError)
+        |> F.applyValidation (fields.checkInTime |> F.mapError CheckInTimeError)
+        |> F.applyValidation (fields.checkOut |> F.mapError CheckOutError)
 
 
 

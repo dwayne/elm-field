@@ -106,11 +106,11 @@ submit (SignUp fields) =
     (\username email password _ ->
         Submission username email password
     )
-        |> F.get (fields.username |> F.mapError UsernameError)
-        |> F.and (fields.email |> F.mapError EmailError)
-        |> F.and (fields.password |> F.mapError PasswordError)
-        |> F.and (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
-        |> F.andResult
+        |> F.succeed (fields.username |> F.mapError UsernameError)
+        |> F.applyValidation (fields.email |> F.mapError EmailError)
+        |> F.applyValidation (fields.password |> F.mapError PasswordError)
+        |> F.applyValidation (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
+        |> F.validationToResult
 
 
 toFields : SignUp -> Fields

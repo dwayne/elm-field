@@ -17,9 +17,8 @@ module Field exposing
     , toRawString, toString, toMaybe, toResult, toType
     , Validation, toValidation
     , Converters, typeToConverters, toConverters
-    , applyMaybe, applyResult
     , validate2, validate3, validate4, validate5
-    , get, and, withDefault, andMaybe, andResult, andFinally
+    , applyMaybe, applyResult, applyValidation, succeed, validationToResult
     , trim
     , Error, blankError, syntaxError, validationError, customError, errorToString
     , mapTypeError
@@ -113,11 +112,14 @@ TODO: Explain about empty and blank strings.
 @docs Converters, typeToConverters, toConverters
 
 
-# Applicative
+# Validate
 
-@docs applyMaybe, applyResult
 @docs validate2, validate3, validate4, validate5
-@docs get, and, withDefault, andMaybe, andResult, andFinally
+
+
+# Apply
+
+@docs applyMaybe, applyResult, applyValidation, succeed, validationToResult
 
 
 # Helpers
@@ -639,19 +641,7 @@ toType =
 
 
 
--- APPLICATIVE
-
-
-{-| -}
-applyMaybe : F.Field e a -> Maybe (a -> b) -> Maybe b
-applyMaybe =
-    F.applyMaybe
-
-
-{-| -}
-applyResult : F.Field e a -> Result (List e) (a -> b) -> Result (List e) b
-applyResult =
-    F.applyResult
+-- VALIDATE
 
 
 {-| -}
@@ -678,45 +668,38 @@ validate5 =
     F.validate5
 
 
-{-| -}
-get : F.Field e a -> (a -> b) -> Validation e b
-get =
-    F.get
+
+-- APPLY
 
 
 {-| -}
-and : F.Field e a -> Validation e (a -> b) -> Validation e b
-and =
-    F.and
+applyMaybe : F.Field e a -> Maybe (a -> b) -> Maybe b
+applyMaybe =
+    F.applyMaybe
 
 
 {-| -}
-withDefault : a -> Validation e a -> a
-withDefault =
-    F.withDefault
+applyResult : F.Field e a -> Result (List e) (a -> b) -> Result (List e) b
+applyResult =
+    F.applyResult
 
 
 {-| -}
-andMaybe : Validation e a -> Maybe a
-andMaybe =
-    F.andMaybe
+applyValidation : F.Field e a -> Validation e (a -> b) -> Validation e b
+applyValidation =
+    F.applyValidation
 
 
 {-| -}
-andResult : Validation e a -> Result (List e) a
-andResult =
-    F.andResult
+succeed : F.Field e a -> (a -> b) -> Validation e b
+succeed =
+    F.succeed
 
 
 {-| -}
-andFinally :
-    { onSuccess : a -> b
-    , onFailure : List e -> b
-    }
-    -> Validation e a
-    -> b
-andFinally =
-    F.andFinally
+validationToResult : Validation e a -> Result (List e) a
+validationToResult =
+    F.validationToResult
 
 
 

@@ -147,7 +147,7 @@ validate fields =
     case fields.flight of
         Flight.OneWay ->
             OneWay
-                |> F.get (fields.departure |> F.mapError DepartureError)
+                |> F.succeed (fields.departure |> F.mapError DepartureError)
 
         Flight.Return ->
             (\departure return ->
@@ -156,5 +156,5 @@ validate fields =
                     , return = return
                     }
             )
-                |> F.get (fields.departure |> F.mapError DepartureError)
-                |> F.and (fields.return |> F.mapError ReturnError)
+                |> F.succeed (fields.departure |> F.mapError DepartureError)
+                |> F.applyValidation (fields.return |> F.mapError ReturnError)
