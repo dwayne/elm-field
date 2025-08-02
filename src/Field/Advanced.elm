@@ -14,12 +14,12 @@ module Field.Advanced exposing
     , empty, fromString, fromValue
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
     , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
-    , toRawString, toString, toMaybe, toResult, toType
+    , toRawString, toString, toMaybe, toResult, toValidation, toType
     , State, toState
-    , Validation, toValidation
+    , Validation, succeed, validationToResult
     , Converters, typeToConverters, toConverters
-    , validate2, validate3, validate4, validate5
-    , applyMaybe, applyResult, applyValidation, succeed, validationToResult
+    , validate, validate2, validate3, validate4, validate5
+    , applyMaybe, applyResult, applyValidation
     , trim, customTrim
     , Error, defaultErrors, blankError, syntaxError, validationError, customError, errorToString, mapErrorType
     , mapTypeError
@@ -111,7 +111,7 @@ these are the only functions that can dirty a field.
 
 # Convert
 
-@docs toRawString, toString, toMaybe, toResult, toType
+@docs toRawString, toString, toMaybe, toResult, toValidation, toType
 
 
 # State
@@ -121,7 +121,7 @@ these are the only functions that can dirty a field.
 
 # Validation
 
-@docs Validation, toValidation
+@docs Validation, succeed, validationToResult
 
 
 # Converters
@@ -131,7 +131,7 @@ these are the only functions that can dirty a field.
 
 # Validate
 
-@docs validate2, validate3, validate4, validate5
+@docs validate, validate2, validate3, validate4, validate5
 
 
 # Apply
@@ -140,10 +140,10 @@ these are the only functions that can dirty a field.
 The functions below attempt to make it convenient to do an applicative style of programming with fields by
 leveraging the applicative nature of `Maybe`, `Result e`, and `Validation e`.
 
-@docs applyMaybe, applyResult, applyValidation, succeed, validationToResult
+@docs applyMaybe, applyResult, applyValidation
 
 
-# Helpers
+# String Helpers
 
 @docs trim, customTrim
 
@@ -198,6 +198,44 @@ type alias State e a =
 -}
 type alias Validation e a =
     V.Validation e a
+
+
+{-| Useful to use with [`applyValidation`](#applyValidation).
+
+Let `f` represent a function that takes `N >= 2` arguments. Then,
+
+    succeed f
+        |> applyValidation field1
+        |> applyValidation field2
+        |> ...
+        |> applyValidation fieldN
+
+applies `f` to `N` arguments as long as no field has an error.
+
+-}
+succeed : a -> Validation e a
+succeed =
+    V.succeed
+
+
+{-| Useful to use with [`applyValidation`](#applyValidation).
+
+Let `f` represent a function that takes `N >= 2` arguments. Then,
+
+    succeed f
+        |> applyValidation field1
+        |> applyValidation field2
+        |> ...
+        |> applyValidation fieldN
+        |> validationToResult
+
+applies `f` to `N` arguments as long as no field has an error. The
+`Validation` type is converted to a `Result` type for convenience.
+
+-}
+validationToResult : Validation e a -> Result (List e) a
+validationToResult =
+    V.toResult
 
 
 
@@ -405,19 +443,19 @@ customInt :
     }
     -> (Int -> Result e Int)
     -> Type e Int
-customInt errors validate =
+customInt errors makeFromValue =
     Type
         { fromString =
             customTrim errors.blankError
                 (\s ->
                     case String.toInt s of
                         Just n ->
-                            validate n
+                            makeFromValue n
 
                         Nothing ->
                             Err (errors.syntaxError s)
                 )
-        , fromValue = validate
+        , fromValue = makeFromValue
         , toString = String.fromInt
         }
 
@@ -583,19 +621,19 @@ customFloat :
     }
     -> (Float -> Result e Float)
     -> Type e Float
-customFloat errors validate =
+customFloat errors makeFromValue =
     Type
         { fromString =
             customTrim errors.blankError
                 (\s ->
                     case String.toFloat s of
                         Just f ->
-                            validate f
+                            makeFromValue f
 
                         Nothing ->
                             Err (errors.syntaxError s)
                 )
-        , fromValue = validate
+        , fromValue = makeFromValue
         , toString = String.fromFloat
         }
 
@@ -752,7 +790,7 @@ customBool :
     -> CustomBoolOptions
     -> (Bool -> Result e Bool)
     -> Type e Bool
-customBool errors options validate =
+customBool errors options makeFromValue =
     let
         ( truthy, falsy ) =
             if options.caseSensitive then
@@ -776,15 +814,15 @@ customBool errors options validate =
                                 String.toLower s
                     in
                     if Set.member t truthy then
-                        validate True
+                        makeFromValue True
 
                     else if Set.member t falsy then
-                        validate False
+                        makeFromValue False
 
                     else
                         Err (errors.syntaxError s)
                 )
-        , fromValue = validate
+        , fromValue = makeFromValue
         , toString = options.toString
         }
 
@@ -930,7 +968,7 @@ customSubsetOfChar :
     -> Type e Char
 customSubsetOfChar errors isGood =
     let
-        validate ch =
+        makeFromValue ch =
             if isGood ch then
                 Ok ch
 
@@ -942,7 +980,7 @@ customSubsetOfChar errors isGood =
             \s ->
                 case String.uncons s of
                     Just ( ch, "" ) ->
-                        validate ch
+                        makeFromValue ch
 
                     Just _ ->
                         Err <|
@@ -954,7 +992,7 @@ customSubsetOfChar errors isGood =
 
                     Nothing ->
                         Err errors.blankError
-        , fromValue = validate
+        , fromValue = makeFromValue
         , toString = String.fromChar
         }
 
@@ -1015,12 +1053,12 @@ customSubsetOfString toValidationError =
 customString : (String -> Result e String) -> Type e String
 customString f =
     let
-        validate =
+        makeFromValue =
             String.trim >> f
     in
     Type
-        { fromString = validate
-        , fromValue = validate
+        { fromString = makeFromValue
+        , fromValue = makeFromValue
         , toString = identity
         }
 
@@ -1077,7 +1115,7 @@ customSubsetOfNonEmptyString errors =
 customNonEmptyString : e -> (String -> Result e String) -> Type e String
 customNonEmptyString blank f =
     let
-        validate s =
+        makeFromValue s =
             if String.isEmpty s then
                 Err blank
 
@@ -1085,8 +1123,8 @@ customNonEmptyString blank f =
                 f s
     in
     Type
-        { fromString = validate
-        , fromValue = validate
+        { fromString = makeFromValue
+        , fromValue = makeFromValue
         , toString = identity
         }
 
@@ -1151,12 +1189,12 @@ customSubsetOfNonBlankString errors =
 customNonBlankString : e -> (String -> Result e String) -> Type e String
 customNonBlankString blank f =
     let
-        validate =
+        makeFromValue =
             customTrim blank f
     in
     Type
-        { fromString = validate
-        , fromValue = validate
+        { fromString = makeFromValue
+        , fromValue = makeFromValue
         , toString = identity
         }
 
@@ -1203,7 +1241,7 @@ subsetOfType =
 customSubsetOfType : (String -> e) -> (a -> Bool) -> Type e a -> Type e a
 customSubsetOfType toValidationError isGood (Type converters) =
     let
-        validate x =
+        makeFromValue x =
             if isGood x then
                 Ok x
 
@@ -1211,8 +1249,8 @@ customSubsetOfType toValidationError isGood (Type converters) =
                 Err (toValidationError <| converters.toString x)
     in
     Type
-        { fromString = converters.fromString >> Result.andThen validate
-        , fromValue = converters.fromValue >> Result.andThen validate
+        { fromString = converters.fromString >> Result.andThen makeFromValue
+        , fromValue = converters.fromValue >> Result.andThen makeFromValue
         , toString = converters.toString
         }
 
@@ -1642,7 +1680,15 @@ toResult =
     V.toResult << toValidation
 
 
-{-| -}
+{-|
+
+    import Validation as V
+
+    toValidation (empty int) == V.fail blankError
+
+    toValidation (fromString int "5") == V.succeed 5
+
+-}
 toValidation : Field e a -> Validation e a
 toValidation (Field _ { processed }) =
     processed
@@ -1669,6 +1715,12 @@ toState (Field _ state) =
 
 
 -- VALIDATE
+
+
+{-| -}
+validate : (a -> value) -> Field x a -> Validation x value
+validate f field =
+    V.map f (toValidation field)
 
 
 {-| -}
@@ -1790,7 +1842,8 @@ errors that occur.
                 else
                     NonPositive n f b c s
             )
-            |> succeed (fromString int "5")
+            |> succeed
+            |> applyValidation (fromString int "5")
             |> applyValidation (fromString float "pi")
             |> applyValidation (fromString bool "not")
             |> applyValidation (fromValue char 'a')
@@ -1805,20 +1858,8 @@ applyValidation field =
     V.apply (toValidation field)
 
 
-{-| -}
-succeed : Field e a -> (a -> b) -> Validation e b
-succeed field f =
-    V.map f (toValidation field)
 
-
-{-| -}
-validationToResult : Validation e a -> Result (List e) a
-validationToResult =
-    V.toResult
-
-
-
--- HELPERS
+-- STRING HELPERS
 
 
 {-| -}

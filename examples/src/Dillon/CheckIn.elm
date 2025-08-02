@@ -176,7 +176,8 @@ validate fields =
             (Stay checkIn checkInTime (Date.nights checkIn checkOut))
             fields.subscribe
     )
-        |> F.succeed (fields.name |> F.mapError NameError)
+        |> F.succeed
+        |> F.applyValidation (fields.name |> F.mapError NameError)
         |> F.applyValidation (fields.checkIn |> F.mapError CheckInError)
         |> F.applyValidation (fields.checkInTime |> F.mapError CheckInTimeError)
         |> F.applyValidation (fields.checkOut |> F.mapError CheckOutError)

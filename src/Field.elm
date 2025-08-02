@@ -17,7 +17,7 @@ module Field exposing
     , toRawString, toString, toMaybe, toResult, toType
     , Validation, toValidation
     , Converters, typeToConverters, toConverters
-    , validate2, validate3, validate4, validate5
+    , validate, validate2, validate3, validate4, validate5
     , applyMaybe, applyResult, applyValidation, succeed, validationToResult
     , trim
     , Error, blankError, syntaxError, validationError, customError, errorToString
@@ -114,7 +114,7 @@ TODO: Explain about empty and blank strings.
 
 # Validate
 
-@docs validate2, validate3, validate4, validate5
+@docs validate, validate2, validate3, validate4, validate5
 
 
 # Apply
@@ -645,6 +645,12 @@ toType =
 
 
 {-| -}
+validate : (a -> value) -> F.Field x a -> Validation x value
+validate =
+    F.validate
+
+
+{-| -}
 validate2 : (a -> b -> value) -> F.Field x a -> F.Field x b -> Validation x value
 validate2 =
     F.validate2
@@ -691,7 +697,7 @@ applyValidation =
 
 
 {-| -}
-succeed : F.Field e a -> (a -> b) -> Validation e b
+succeed : a -> Validation e a
 succeed =
     F.succeed
 

@@ -12,6 +12,7 @@ suite =
         [ primitiveSuite
         , userDefinedSuite
         , optionalSuite
+        , applySuite
         ]
 
 
@@ -509,3 +510,90 @@ testStringToValue tipe { raw, result } =
         \_ ->
             (F.typeToConverters tipe).fromString raw
                 |> Expect.equal result
+
+
+applySuite : Test
+applySuite =
+    describe "Apply" <|
+        let
+            combine n f b c s =
+                if n > 0 then
+                    Positive n f b c s
+
+                else
+                    NonPositive n f b c s
+        in
+        [ describe "applyMaybe"
+            [ test "success" <|
+                \_ ->
+                    combine
+                        |> Just
+                        |> F.applyMaybe (F.fromString F.int "5")
+                        |> F.applyMaybe (F.fromString F.float "3.14")
+                        |> F.applyMaybe (F.fromValue F.bool True)
+                        |> F.applyMaybe (F.fromValue F.char 'a')
+                        |> F.applyMaybe (F.fromString F.string "Hello")
+                        |> Expect.equal (Just <| Positive 5 3.14 True 'a' "Hello")
+            , test "multiple errors" <|
+                \_ ->
+                    combine
+                        |> Just
+                        |> F.applyMaybe (F.fromString F.int "5")
+                        |> F.applyMaybe (F.fromString F.float "pi")
+                        |> F.applyMaybe (F.fromString F.bool "not")
+                        |> F.applyMaybe (F.fromValue F.char 'a')
+                        |> F.applyMaybe (F.fromString F.string "Hello")
+                        |> Expect.equal Nothing
+            ]
+        , describe "applyResult"
+            [ test "success" <|
+                \_ ->
+                    combine
+                        |> Ok
+                        |> F.applyResult (F.fromString F.int "5")
+                        |> F.applyResult (F.fromString F.float "3.14")
+                        |> F.applyResult (F.fromValue F.bool True)
+                        |> F.applyResult (F.fromValue F.char 'a')
+                        |> F.applyResult (F.fromString F.string "Hello")
+                        |> Expect.equal (Ok <| Positive 5 3.14 True 'a' "Hello")
+            , test "multiple errors" <|
+                \_ ->
+                    combine
+                        |> Ok
+                        |> F.applyResult (F.fromString F.int "5")
+                        |> F.applyResult (F.fromString F.float "pi")
+                        |> F.applyResult (F.fromString F.bool "not")
+                        |> F.applyResult (F.fromValue F.char 'a')
+                        |> F.applyResult (F.fromString F.string "Hello")
+                        |> Expect.equal (Err [ F.syntaxError "pi" ])
+            ]
+        , describe "applyValidation"
+            [ test "success" <|
+                \_ ->
+                    combine
+                        |> F.succeed
+                        |> F.applyValidation (F.fromString F.int "5")
+                        |> F.applyValidation (F.fromString F.float "3.14")
+                        |> F.applyValidation (F.fromValue F.bool True)
+                        |> F.applyValidation (F.fromValue F.char 'a')
+                        |> F.applyValidation (F.fromString F.string "Hello")
+                        |> F.validationToResult
+                        |> Expect.equal (Ok <| Positive 5 3.14 True 'a' "Hello")
+            , test "multiple errors" <|
+                \_ ->
+                    combine
+                        |> F.succeed
+                        |> F.applyValidation (F.fromString F.int "5")
+                        |> F.applyValidation (F.fromString F.float "pi")
+                        |> F.applyValidation (F.fromString F.bool "not")
+                        |> F.applyValidation (F.fromValue F.char 'a')
+                        |> F.applyValidation (F.fromString F.string "Hello")
+                        |> F.validationToResult
+                        |> Expect.equal (Err [ F.syntaxError "pi", F.syntaxError "not" ])
+            ]
+        ]
+
+
+type Primitives
+    = Positive Int Float Bool Char String
+    | NonPositive Int Float Bool Char String

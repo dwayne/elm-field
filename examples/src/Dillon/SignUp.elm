@@ -129,7 +129,8 @@ validate fields =
     (\username password _ role ->
         Output username password role
     )
-        |> F.succeed (fields.username |> F.mapError UsernameError)
+        |> F.succeed
+        |> F.applyValidation (fields.username |> F.mapError UsernameError)
         |> F.applyValidation (fields.password |> F.mapError PasswordError)
         |> F.applyValidation (fields.passwordConfirmation |> F.mapError PasswordConfirmationError)
         |> F.applyValidation (fields.role |> F.mapError RoleError)
