@@ -1,6 +1,6 @@
 module Field exposing
-    ( Field, FieldString
-    , Type, TypeString
+    ( Field
+    , Type
     , int, nonNegativeInt, positiveInt, nonPositiveInt, negativeInt, subsetOfInt
     , float, nonNegativeFloat, positiveFloat, nonPositiveFloat, negativeFloat, subsetOfFloat
     , bool, true, false, customSubsetOfBool
@@ -14,14 +14,13 @@ module Field exposing
     , empty, fromString, fromValue
     , setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
     , isEmpty, isNonEmpty, isBlank, isNonBlank, isClean, isDirty, isValid, isInvalid
-    , toRawString, toString, toMaybe, toResult, toType
-    , Validation, toValidation
+    , toRawString, toString, toMaybe, toResult, toValidation
+    , Validation, succeed, validationToResult
     , Converters, typeToConverters, toConverters
     , validate, validate2, validate3, validate4, validate5
-    , applyMaybe, applyResult, applyValidation, succeed, validationToResult
+    , applyMaybe, applyResult, applyValidation
     , trim
     , Error, blankError, syntaxError, validationError, customError, errorToString
-    , mapTypeError
     , mapError
     , firstError, lastError, allErrors
     )
@@ -31,12 +30,12 @@ module Field exposing
 
 # Field
 
-@docs Field, FieldString
+@docs Field
 
 
 # Type
 
-@docs Type, TypeString
+@docs Type
 
 
 # Primitive
@@ -64,8 +63,6 @@ module Field exposing
 
 
 # String
-
-TODO: Explain about empty and blank strings.
 
 @docs string, subsetOfString
 @docs nonEmptyString, subsetOfNonEmptyString
@@ -99,12 +96,12 @@ TODO: Explain about empty and blank strings.
 
 # Convert
 
-@docs toRawString, toString, toMaybe, toResult, toType
+@docs toRawString, toString, toMaybe, toResult, toValidation
 
 
 # Validation
 
-@docs Validation, toValidation
+@docs Validation, succeed, validationToResult
 
 
 # Converters
@@ -119,10 +116,10 @@ TODO: Explain about empty and blank strings.
 
 # Apply
 
-@docs applyMaybe, applyResult, applyValidation, succeed, validationToResult
+@docs applyMaybe, applyResult, applyValidation
 
 
-# Helpers
+# String Helpers
 
 @docs trim
 
@@ -134,7 +131,6 @@ TODO: Explain about empty and blank strings.
 
 # Handle Errors
 
-@docs mapTypeError
 @docs mapError
 @docs firstError, lastError, allErrors
 
@@ -155,13 +151,20 @@ type alias Field a =
 
 
 {-| -}
-type alias FieldString =
-    F.Field Never String
+type alias Validation e a =
+    V.Validation e a
 
 
 {-| -}
-type alias Validation e a =
-    V.Validation e a
+succeed : a -> Validation e a
+succeed =
+    F.succeed
+
+
+{-| -}
+validationToResult : Validation e a -> Result (List e) a
+validationToResult =
+    F.validationToResult
 
 
 
@@ -174,13 +177,14 @@ type alias Type a =
 
 
 {-| -}
-type alias TypeString =
-    F.Type Never String
+type alias Converters e a =
+    F.Converters e a
 
 
 {-| -}
-type alias Converters e a =
-    F.Converters e a
+typeToConverters : F.Type e a -> Converters e a
+typeToConverters =
+    F.typeToConverters
 
 
 
@@ -345,7 +349,7 @@ subsetOfChar =
 
 
 {-| -}
-string : TypeString
+string : F.Type e String
 string =
     F.string
 
@@ -408,76 +412,6 @@ customType =
 optional : Type a -> Type (Maybe a)
 optional =
     F.optional
-
-
-
--- TYPE: CONVERT
-
-
-{-| -}
-typeToConverters : F.Type e a -> Converters e a
-typeToConverters =
-    F.typeToConverters
-
-
-
--- HELPERS
-
-
-{-| -}
-trim : (String -> Result Error a) -> String -> Result Error a
-trim =
-    F.trim
-
-
-
--- ERROR
-
-
-{-| -}
-type alias Error =
-    F.Error String
-
-
-{-| -}
-blankError : Error
-blankError =
-    F.blankError
-
-
-{-| -}
-syntaxError : String -> Error
-syntaxError =
-    F.syntaxError
-
-
-{-| -}
-validationError : String -> Error
-validationError =
-    F.validationError
-
-
-{-| -}
-customError : String -> Error
-customError =
-    F.customError
-
-
-{-| -}
-errorToString :
-    { onBlank : String
-    , onSyntaxError : String -> String
-    , onValidationError : String -> String
-    }
-    -> Error
-    -> String
-errorToString { onBlank, onSyntaxError, onValidationError } =
-    F.errorToString
-        { onBlank = onBlank
-        , onSyntaxError = onSyntaxError
-        , onValidationError = onValidationError
-        , onCustomError = identity
-        }
 
 
 
@@ -605,6 +539,12 @@ toRawString =
 
 
 {-| -}
+toString : F.Field e a -> String
+toString =
+    F.toString
+
+
+{-| -}
 toMaybe : F.Field e a -> Maybe a
 toMaybe =
     F.toMaybe
@@ -623,21 +563,9 @@ toValidation =
 
 
 {-| -}
-toString : F.Field e a -> String
-toString =
-    F.toString
-
-
-{-| -}
 toConverters : F.Field e a -> F.Converters e a
 toConverters =
     F.toConverters
-
-
-{-| -}
-toType : F.Field e a -> F.Type e a
-toType =
-    F.toType
 
 
 
@@ -696,26 +624,68 @@ applyValidation =
     F.applyValidation
 
 
-{-| -}
-succeed : a -> Validation e a
-succeed =
-    F.succeed
+
+-- STRING HELPERS
 
 
 {-| -}
-validationToResult : Validation e a -> Result (List e) a
-validationToResult =
-    F.validationToResult
+trim : (String -> Result Error a) -> String -> Result Error a
+trim =
+    F.trim
+
+
+
+-- ERROR
+
+
+{-| -}
+type alias Error =
+    F.Error String
+
+
+{-| -}
+blankError : Error
+blankError =
+    F.blankError
+
+
+{-| -}
+syntaxError : String -> Error
+syntaxError =
+    F.syntaxError
+
+
+{-| -}
+validationError : String -> Error
+validationError =
+    F.validationError
+
+
+{-| -}
+customError : String -> Error
+customError =
+    F.customError
+
+
+{-| -}
+errorToString :
+    { onBlank : String
+    , onSyntaxError : String -> String
+    , onValidationError : String -> String
+    }
+    -> Error
+    -> String
+errorToString { onBlank, onSyntaxError, onValidationError } =
+    F.errorToString
+        { onBlank = onBlank
+        , onSyntaxError = onSyntaxError
+        , onValidationError = onValidationError
+        , onCustomError = identity
+        }
 
 
 
 -- HANDLE ERRORS
-
-
-{-| -}
-mapTypeError : (x -> y) -> F.Type x a -> F.Type y a
-mapTypeError =
-    F.mapTypeError
 
 
 {-| -}
