@@ -1717,19 +1717,53 @@ toState (Field _ state) =
 -- VALIDATE
 
 
-{-| -}
+{-| Apply a function to the processed value of a field. If the field is valid,
+the value will be converted. If the field is invalid, the same error will be
+propagated.
+
+    import Validation as V
+
+    validate sqrt (fromString float "4.0") == V.succeed 2.0
+
+    validate sqrt (fromString float "") == V.fail blankError
+
+-}
 validate : (a -> value) -> Field x a -> Validation x value
 validate f field =
     V.map f (toValidation field)
 
 
-{-| -}
+{-| Apply a function if both fields are valid. If not, the errors will be accumulated
+in order of failure.
+
+    import Validation as V
+
+    validate2 max (fromString int "42") (fromString int "13") == V.succeed 42
+
+    validate2 max (fromString int "x") (fromString int "13") == V.fail (syntaxError "x")
+
+    validate2 max (fromString int "42") (fromString int "y") == V.fail (syntaxError "y")
+
+    validate2 max (fromString int "x") (fromString int "y") == V.failWithErrors (syntaxError "x") [ syntaxError "y" ]
+
+-}
 validate2 : (a -> b -> value) -> Field x a -> Field x b -> Validation x value
 validate2 f field1 field2 =
     V.map2 f (toValidation field1) (toValidation field2)
 
 
-{-| -}
+{-| Apply a function if all three fields are valid. If not, the errors will be accumulated
+in order of failure.
+
+    validate3 (\a b c -> a + b + c) (fromString int "1") (fromString int "2") (fromString int "3") == V.succeed 6
+
+    validate3 (\a b c -> a + b + c) (fromString int "1") (fromString int "y") (fromString int "3") == V.fail (syntaxError "y")
+
+    validate3 (\a b c -> a + b + c) (fromString int "x") (fromString int "2") (fromString int "z") == V.failWithErrors (syntaxError "x") [ syntaxError "z" ]
+
+    validate3 (\a b c -> a + b + c) (fromString int "x") (fromString int "y") (fromString int "z") == V.failWithErrors (syntaxError "x") [ syntaxError "y", syntaxError "z" ]
+
+-}
 validate3 : (a -> b -> c -> value) -> Field x a -> Field x b -> Field x c -> Validation x value
 validate3 f field1 field2 field3 =
     V.map3 f (toValidation field1) (toValidation field2) (toValidation field3)
