@@ -1896,13 +1896,51 @@ applyValidation field =
 -- STRING HELPERS
 
 
-{-| -}
+{-| Get rid of whitespace on both sides of a string.
+
+If the trimmed string is empty return [`blankError`](#blankError),
+otherwise apply the given function to the trimmed string.
+
+It is useful when you're defining a custom field type.
+
+    type Username = Username String
+
+    username : Type (Error String) Username
+    username =
+        customType
+            { fromString =
+                trim
+                    (\s ->
+                        let
+                            len =
+                                String.length s
+                        in
+                        if len < 3 then
+                            Err <| customError "The username must have at least 3 characters."
+                        else if len > 25 then
+                            Err <| customError "The username must have at most 25 characters."
+                        else
+                            Ok (Username s)
+                    )
+            , toString =
+                \(Username s) -> s
+            }
+
+
+    toResult (fromString username "abc") == Ok (Username "abc")
+
+    toResult (fromString username "ab") == Err [ customError "The username must have at least 3 characters." ]
+
+    toResult (fromString username "abcdefghijklmnopqrstuvwxyz") == Err [ customError "The username must have at most 25 characters." ]
+
+-}
 trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
 trim =
     customTrim Blank
 
 
-{-| -}
+{-| Similar to [`trim`](#trim) but you get to customize the blank error.
+-}
 customTrim : e -> (String -> Result e a) -> String -> Result e a
 customTrim blank f s =
     let
@@ -1920,19 +1958,27 @@ customTrim blank f s =
 -- ERROR
 
 
-{-| -}
+{-| The error type returned by the built-in field types. It supports blank, syntax, validation, and custom validation errors.
+-}
 type Error e
-    = Blank -- The empty string or a string containing only whitespace characters
-      --
-      -- The string in the SyntaxError and the ValidationError should always be the string that caused the error.
-      -- It should NEVER be a description of the error. CustomError is used for detail.
-      --
-    | SyntaxError String -- A string that cannot be converted to the desired type, for e.g. "x" isn't an Int
-    | ValidationError String -- A type that isn't in the subset of the type under consideration, for e.g. 1 is an Int but not an even Int
-    | CustomError e -- A more specific type of validation error
+    = Blank
+    | SyntaxError String
+    | ValidationError String
+    | CustomError e
 
 
-{-| -}
+{-| The default [blank](#blankError), [syntax](#syntaxError), and [validation](#validationError) errors. It's particularly useful when
+customizing the `Bool` type with [`customSubsetOfBool`](#customSubsetOfBool) and you don't want to customize the errors.
+
+    myBool = customSubsetOfBool defaultErrors { defaultCustomBoolOptions | caseSensitive = True } (always True)
+
+    toResult (fromString myBool "true") == Ok True
+
+    toResult (fromString bool "True") == Ok True
+
+    toResult (fromString myBool "True") == Err [ syntaxError "True" ]
+
+-}
 defaultErrors :
     { blankError : Error e
     , syntaxError : String -> Error e
@@ -1945,31 +1991,136 @@ defaultErrors =
     }
 
 
-{-| -}
+{-| Indicates that the user's input string is either the empty string or a string containing only whitespace characters.
+
+    toResult (fromString positiveInt "") == Err [ blankError ]
+
+    toResult (fromString positiveInt "\n\t ") == Err [ blankError ]
+
+-}
 blankError : Error e
 blankError =
     Blank
 
 
-{-| -}
+{-| Indicates that the user's input string cannot be converted to the desired type.
+
+    toResult (fromString positiveInt "five") == Err [ syntaxError "five" ]
+
+The string used in the syntax error is the trimmed user's input string that caused the error.
+
+    toResult (fromString positiveInt " five\n \t") == Err [ syntaxError "five" ]
+
+-}
 syntaxError : String -> Error e
 syntaxError =
     SyntaxError
 
 
-{-| -}
+{-| Indicates that the user's input string was successfully converted to a value of the desired type but
+that the value wasn't contained in the subset of values under consideration.
+
+    toResult (fromString positiveInt "0") == Err [ validationError "0" ]
+
+    toResult (fromString positiveInt "-1") == Err [ validationError "-1" ]
+
+Let `v` represent the value to which the user's input string was successfully converted. The string used
+in the validation error is the string returned by the `toString` function of the field's type when it's
+applied to `v`.
+
+    v : Int
+    v = -1
+
+    field : Field (Error e) Int
+    field = fromString positiveInt " -1 \n \t"
+
+    negativeOne : String
+    negativeOne = (toConverters field).toString v
+
+    toResult field == Err [ validationError negativeOne ]
+
+In the above example, the user's input string, `" -1 \n \t"`, would be successfully converted to the
+value, `-1`, but `-1` is not a positive integer. Hence, the string representation of `-1` as determined
+by `(toConverters field).toString` is used in the validation error.
+
+-}
 validationError : String -> Error e
 validationError =
     ValidationError
 
 
-{-| -}
+{-| Indicates that the user's input string was successfully converted to a value of the desired type but
+that the value wasn't contained in the subset of values under consideration.
+
+It's similar to a [`validationError`](#validationError) but rather than a `String` you get to customize
+the type used to record any extra error details.
+
+    type Username = Username String
+
+    type UsernameError
+        = TooShort { actual : Int, min : Int }
+        | TooLong { actual : Int, max : Int }
+
+    username : Type (Error UsernameError) Username
+    username =
+        customType
+            { fromString =
+                trim
+                    (\s ->
+                        let
+                            len =
+                                String.length s
+                        in
+                        if len < 3 then
+                            Err <| customError (TooShort { actual = len, min = 3 })
+                        else if len > 25 then
+                            Err <| customError (TooLong { actual = len, max = 25 })
+                        else
+                            Ok (Username s)
+                    )
+            , toString =
+                \(Username s) -> s
+            }
+
+    toResult (fromString username "abc") == Ok (Username "abc")
+
+    toResult (fromString username "ab") == Err [ customError (TooShort { actual = 2, min = 3 }) ]
+
+    toResult (fromString username "abcdefghijklmnopqrstuvwxyz") == Err [ customError (TooLong { actual = 26, max = 25 }) ]
+
+You get to design the type so that you'd have enough information available to display
+a user-friendly error message. See [`errorToString`](#errorToString) for an example.
+
+-}
 customError : e -> Error e
 customError =
     CustomError
 
 
-{-| -}
+{-| Convert your errors to user-friendly error messages.
+
+Let's continue with the example from [`customError`](#customError).
+
+    toErrorMessage : Error UsernameError -> String
+    toErrorMessage =
+        errorToString
+            { onBlank = "The username is required."
+            , onSyntaxError = always ""
+            , onValidationError = always ""
+            , onCustomError =
+                \e ->
+                    case e of
+                        TooShort { actual, min } ->
+                            "The username must have at least " ++ String.fromInt min ++ " characters: " ++ String.fromInt actual ++ "."
+                        TooLong { actual, max } ->
+                            "The username must have at most " ++ String.fromInt max ++ " characters: " ++ String.fromInt actual ++ "."
+            }
+
+    toErrorMessage (customError <| TooShort { actual = 2, min = 3 }) == "The username must have at least 3 characters: 2."
+
+    toErrorMessage (customError <| TooLong { actual = 26, max = 25 }) == "The username must have at most 25 characters: 26."
+
+-}
 errorToString :
     { onBlank : String
     , onSyntaxError : String -> String
@@ -2020,7 +2171,63 @@ mapTypeError f (Type converters) =
     Type (mapConvertersError f converters)
 
 
-{-| -}
+{-| Apply a function to the error value of the field type. It's useful for unifying
+multiple custom field errors under a single error type.
+
+Let's continue with the example from [`customError`](#customError) and incorporate an `Age` type.
+
+    type Age = Age Int
+
+    type AgeError
+        = TooYoung { actual : Int, min : Int }
+        | TooOld { actual : Int, max : Int }
+
+    age : Type (Error AgeError) Age
+    age =
+        customType
+            { fromString =
+                (typeToConverters positiveInt).fromString
+                    >> Result.andThen
+                        (\n ->
+                            if n < 21 then
+                                Err <| customError (TooYoung { actual = n, min = 21 })
+                            else if n > 65 then
+                                Err <| customError (TooOld { actual = n, max = 65 })
+                            else
+                                Ok (Age n)
+                        )
+            , toString =
+                \(Age n) -> String.fromInt n
+            }
+
+    --
+    -- 1. The single error type under which we will unify the two custom field errors.
+    --
+    type Errors
+        = MyUsernameError (Error UsernameError)
+        | MyAgeError (Error AgeError)
+
+    usernameField : Field (Error UsernameError) Username
+    usernameField = fromString username "ab"
+
+    ageField : Field (Error AgeError) Age
+    ageField = fromString age "67"
+
+    type alias UserDetails = { username : Username, age : Age }
+
+    --
+    -- 2. We use mapError in order to validate both fields at the same time.
+    --
+    resultUserDetails =
+        validationToResult <|
+            validate2
+                UserDetails
+                (usernameField |> mapError MyUsernameError)
+                (ageField |> mapError MyAgeError)
+
+    resultUserDetails == Err [ MyUsernameError (customError <| TooShort { actual = 2, min = 3 }), MyAgeError (customError <| TooOld { actual = 67, max = 65 }) ]
+
+-}
 mapError : (x -> y) -> Field x a -> Field y a
 mapError f (Field converters state) =
     Field
@@ -2039,19 +2246,52 @@ mapConvertersError f converters =
     }
 
 
-{-| -}
+{-|
+
+    fromString string "A string"
+        |> firstError
+        |> (==) Nothing
+
+    fromString string "A string"
+        |> setErrors "First error" [ "Second error", "Third error" ]
+        |> firstError
+        |> (==) (Just "First error")
+
+-}
 firstError : Field e a -> Maybe e
 firstError (Field _ { processed }) =
     V.firstError processed
 
 
-{-| -}
+{-|
+
+    fromString string "A string"
+        |> lastError
+        |> (==) Nothing
+
+    fromString string "A string"
+        |> setErrors "First error" [ "Second error", "Third error" ]
+        |> lastError
+        |> (==) (Just "Third error")
+
+-}
 lastError : Field e a -> Maybe e
 lastError (Field _ { processed }) =
     V.lastError processed
 
 
-{-| -}
+{-|
+
+    fromString string "A string"
+        |> allErrors
+        |> (==) []
+
+    fromString string "A string"
+        |> setErrors "First error" [ "Second error", "Third error" ]
+        |> allErrors
+        |> (==) [ "First error", "Second error", "Third error" ]
+
+-}
 allErrors : Field e a -> List e
 allErrors (Field _ { processed }) =
     V.allErrors processed
