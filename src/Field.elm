@@ -742,37 +742,119 @@ subsetOfChar =
 -- TYPE: STRING
 
 
-{-| -}
+{-| Any trimmed `String` is accepted. It never fails.
+
+    (typeToConverters string).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters string).fromString " Hello " == Ok "Hello"
+
+    (typeToConverters string).fromString "" == Ok ""
+
+    (typeToConverters string).fromString " \n\t " == Ok ""
+
+-}
 string : F.Type e String
 string =
     F.string
 
 
-{-| -}
+{-| Any trimmed `String`, `s`, is accepted if `isGood s` is `True`.
+
+    atMost3 = subsetOfString (String.length >> (>=) 3)
+
+    (typeToConverters atMost3).fromString "p" == Ok "p"
+
+    (typeToConverters atMost3).fromString "pi" == Ok "pi"
+
+    (typeToConverters atMost3).fromString "pie" == Ok "pie"
+
+    (typeToConverters atMost3).fromString " pie " == Ok "pie"
+
+    (typeToConverters atMost3).fromString "Hello" == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString " Hello " == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString "" == Ok ""
+
+    (typeToConverters atMost3).fromString " \n\t " == Ok ""
+
+-}
 subsetOfString : (String -> Bool) -> Type String
 subsetOfString =
     F.subsetOfString
 
 
-{-| -}
+{-| Any `String` except the empty string is accepted. The string is not trimmed.
+
+    (typeToConverters nonEmptyString).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters nonEmptyString).fromString " Hello " == Ok " Hello "
+
+    (typeToConverters nonEmptyString).fromString "" == Err blankError
+
+    (typeToConverters nonEmptyString).fromString " \n\t " == Ok " \n\t "
+
+-}
 nonEmptyString : Type String
 nonEmptyString =
     F.nonEmptyString
 
 
-{-| -}
+{-| Any non-empty `String`, `s`, is only accepted if `isGood s` is `True`. The string is not trimmed.
+
+    hello = subsetOfNonEmptyString ((==) "Hello")
+
+    (typeToConverters hello).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters hello).fromString " Hello " == Err (validationError " Hello ")
+
+    (typeToConverters hello).fromString "" == Err blankError
+
+    (typeToConverters hello).fromString " \n\t " == Err (validationError " \n\t ")
+
+-}
 subsetOfNonEmptyString : (String -> Bool) -> Type String
 subsetOfNonEmptyString =
     F.subsetOfNonEmptyString
 
 
-{-| -}
+{-| Any non-blank trimmed `String` is accepted.
+
+    (typeToConverters nonBlankString).fromString "Hello" == Ok "Hello"
+
+    (typeToConverters nonBlankString).fromString " Hello " == Ok "Hello"
+
+    (typeToConverters nonBlankString).fromString "" == Err blankError
+
+    (typeToConverters nonBlankString).fromString " \n\t " == Err blankError
+
+-}
 nonBlankString : Type String
 nonBlankString =
     F.nonBlankString
 
 
-{-| -}
+{-| Any non-blank trimmed `String`, `s`, is accepted if `isGood s` is `True`.
+
+    atMost3 = subsetOfNonBlankString (String.length >> (>=) 3)
+
+    (typeToConverters atMost3).fromString "p" == Ok "p"
+
+    (typeToConverters atMost3).fromString "pi" == Ok "pi"
+
+    (typeToConverters atMost3).fromString "pie" == Ok "pie"
+
+    (typeToConverters atMost3).fromString " pie " == Ok "pie"
+
+    (typeToConverters atMost3).fromString "Hello" == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString " Hello " == Err (validationError "Hello")
+
+    (typeToConverters atMost3).fromString "" == Err blankError
+
+    (typeToConverters atMost3).fromString " \n\t " == Err blankError
+
+-}
 subsetOfNonBlankString : (String -> Bool) -> Type String
 subsetOfNonBlankString =
     F.subsetOfNonBlankString

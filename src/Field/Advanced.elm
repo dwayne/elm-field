@@ -1002,7 +1002,7 @@ customSubsetOfChar errors isGood =
 -- TYPE: STRING
 
 
-{-| Any `String` is trimmed and accepted. It never fails.
+{-| Any trimmed `String` is accepted. It never fails.
 
     (typeToConverters string).fromString "Hello" == Ok "Hello"
 
@@ -1018,7 +1018,7 @@ string =
     customString Ok
 
 
-{-| Any `String`, `s`, is trimmed and only accepted if `isGood s` is `True`.
+{-| Any trimmed `String`, `s`, is accepted if `isGood s` is `True`.
 
     atMost3 = subsetOfString (String.length >> (>=) 3)
 
@@ -1130,7 +1130,7 @@ customNonEmptyString blank f =
         }
 
 
-{-| Any non-blank `String` is trimmed and accepted.
+{-| Any non-blank trimmed `String` is accepted.
 
     (typeToConverters nonBlankString).fromString "Hello" == Ok "Hello"
 
@@ -1146,7 +1146,7 @@ nonBlankString =
     customString (trim Ok)
 
 
-{-| Any non-blank `String`, `s`, is trimmed and only accepted if `isGood s` is `True`.
+{-| Any non-blank trimmed `String`, `s`, is accepted if `isGood s` is `True`.
 
     atMost3 = subsetOfNonBlankString (String.length >> (>=) 3)
 
