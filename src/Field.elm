@@ -1079,50 +1079,110 @@ setCustomErrors =
 -- QUERY
 
 
-{-| -}
-isEmpty : F.Field e a -> Bool
+{-| Determine whether or not the raw string is equal to the empty string.
+
+    isEmpty (empty int) == True
+
+    isEmpty (fromString int "   ") == False
+
+    isEmpty (fromString int "1") == False
+
+-}
+isEmpty : Field a -> Bool
 isEmpty =
     F.isEmpty
 
 
-{-| -}
-isNonEmpty : F.Field e a -> Bool
+{-| `isNonEmpty f` is equivalent to `not (isEmpty f)`.
+
+    isNonEmpty (empty int) == False
+
+    isNonEmpty (fromString int "   ") == True
+
+    isNonEmpty (fromString int "1") == True
+
+-}
+isNonEmpty : Field a -> Bool
 isNonEmpty =
     F.isNonEmpty
 
 
-{-| -}
-isBlank : F.Field e a -> Bool
+{-| Determine whether or not the raw string is equal to a blank string.
+
+    isBlank (empty int) == True
+
+    isBlank (fromString int "   ") == True
+
+    isBlank (fromString int "1") == False
+
+-}
+isBlank : Field a -> Bool
 isBlank =
     F.isBlank
 
 
-{-| -}
-isNonBlank : F.Field e a -> Bool
+{-| `isNonBlank f` is equivalent to `not (isBlank f)`.
+
+    isNonBlank (empty int) == False
+
+    isNonBlank (fromString int "   ") == False
+
+    isNonBlank (fromString int "1") == True
+
+-}
+isNonBlank : Field a -> Bool
 isNonBlank =
     F.isNonBlank
 
 
-{-| -}
-isClean : F.Field e a -> Bool
+{-| `True` if the field is [clean](#state).
+
+    isClean (empty int) == True
+
+    isClean (fromString int "1") == True
+
+    isClean (setFromString "1" (empty int)) == False
+
+-}
+isClean : Field a -> Bool
 isClean =
     F.isClean
 
 
-{-| -}
-isDirty : F.Field e a -> Bool
+{-| `True` if the field is [dirty](#state). `isDirty f` is equivalent to `not (isClean f)`.
+
+    isDirty (empty int) == False
+
+    isDirty (fromString int "1") == False
+
+    isDirty (setFromString "1" (empty int)) == True
+
+-}
+isDirty : Field a -> Bool
 isDirty =
     F.isDirty
 
 
-{-| -}
-isValid : F.Field e a -> Bool
+{-| `True` if the field does not have any errors.
+
+    isValid (empty int) == False
+
+    isValid (fromString int "1") == True
+
+-}
+isValid : Field a -> Bool
 isValid =
     F.isValid
 
 
-{-| -}
-isInvalid : F.Field e a -> Bool
+{-| `True` if the field has errors. `isInvalid f` is equivalent to `not (isValid f)`.
+
+    isInvalid (empty int) == True
+
+    isInvalid (fromString int "1") == False
+
+-}
+isInvalid : Field a -> Bool
 isInvalid =
     F.isInvalid
 
