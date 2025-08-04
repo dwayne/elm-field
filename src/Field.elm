@@ -40,6 +40,8 @@ module Field exposing
 
 # Primitive
 
+Elm's primitive types: `Int`, `Float`, `Bool`, `Char`, and `String`, all have corresponding field types.
+
 
 # Int
 
@@ -64,6 +66,12 @@ module Field exposing
 
 # String
 
+A **blank** string is either the empty string or a non-empty string consisting entirely of whitespace characters.
+
+The empty string: `""`
+
+Some blank strings: `""`, `" "`, `"  "`, `" \t "`, `"\n \t \r"`
+
 @docs string, subsetOfString
 @docs nonEmptyString, subsetOfNonEmptyString
 @docs nonBlankString, subsetOfNonBlankString
@@ -81,10 +89,15 @@ module Field exposing
 
 # Construct
 
+All newly constructed fields are clean.
+
 @docs empty, fromString, fromValue
 
 
 # Change
+
+Any change to a field using these setter functions makes the field dirty. Furthermore,
+these are the only functions that can dirty a field.
 
 @docs setFromString, setFromValue, setError, setErrors, setCustomError, setCustomErrors
 
@@ -116,6 +129,10 @@ module Field exposing
 
 # Apply
 
+[`Field e`](Field-Advanced#Field) is not applicative. However, `Maybe`, `Result e`, and `Validaton e` are all applicative.
+The functions below attempt to make it convenient to do an applicative style of programming with fields by
+leveraging the applicative nature of `Maybe`, `Result e`, and `Validation e`.
+
 @docs applyMaybe, applyResult, applyValidation
 
 
@@ -145,23 +162,53 @@ import Validation as V
 -- FIELD
 
 
-{-| -}
+{-| Tracks the raw `String` input and either the value of type `a` that the `String` represents or
+the errors of type [`Error`](#Error) that can accumulate.
+-}
 type alias Field a =
     F.Field Error a
 
 
-{-| -}
+{-| Re-export the `Validation` type for convenience.
+-}
 type alias Validation e a =
     V.Validation e a
 
 
-{-| -}
+{-| Useful to use with [`applyValidation`](#applyValidation).
+
+Let `f` represent a function that takes `N >= 1` arguments. Then,
+
+    succeed f
+        |> applyValidation field1
+        |> applyValidation field2
+        |> ...
+        |> applyValidation fieldN
+
+applies `f` to `N` arguments as long as no field has an error.
+
+-}
 succeed : a -> Validation e a
 succeed =
     F.succeed
 
 
-{-| -}
+{-| Convert from a `Validaton` to a `Result` for convenience.
+
+Useful to use with [`applyValidation`](#applyValidation).
+
+Let `f` represent a function that takes `N >= 1` arguments. Then,
+
+    succeed f
+        |> applyValidation field1
+        |> applyValidation field2
+        |> ...
+        |> applyValidation fieldN
+        |> validationToResult
+
+applies `f` to `N` arguments as long as no field has an error.
+
+-}
 validationToResult : Validation e a -> Result (List e) a
 validationToResult =
     F.validationToResult
@@ -171,12 +218,35 @@ validationToResult =
 -- TYPE
 
 
-{-| -}
+{-| Represents the type information for a field. It specifies how a `String` is converted to a type `a`
+and back to a `String`. Conversion may result in errors of type [`Error`](#Error).
+-}
 type alias Type a =
     F.Type Error a
 
 
-{-| -}
+{-| The collection of conversion functions that comprise a `Type`. The conversion functions are useful
+for building new field types from existing field types.
+
+    type Positive
+        = Positive Int
+
+    fromString : String -> Result Error Positive
+    fromString =
+        (typeToConverters positiveInt).fromString >> Result.map Positive
+
+    toString : Positive -> String
+    toString (Positive p) =
+        (typeToConverters positiveInt).toString p
+
+    fieldType : Type Positive
+    fieldType =
+        customType
+            { fromString = fromString
+            , toString = toString
+            }
+
+-}
 type alias Converters e a =
     F.Converters e a
 

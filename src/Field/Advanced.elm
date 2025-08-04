@@ -202,7 +202,7 @@ type alias Validation e a =
 
 {-| Useful to use with [`applyValidation`](#applyValidation).
 
-Let `f` represent a function that takes `N >= 2` arguments. Then,
+Let `f` represent a function that takes `N >= 1` arguments. Then,
 
     succeed f
         |> applyValidation field1
@@ -218,9 +218,11 @@ succeed =
     V.succeed
 
 
-{-| Useful to use with [`applyValidation`](#applyValidation).
+{-| Convert from a `Validaton` to a `Result` for convenience.
 
-Let `f` represent a function that takes `N >= 2` arguments. Then,
+Useful to use with [`applyValidation`](#applyValidation).
+
+Let `f` represent a function that takes `N >= 1` arguments. Then,
 
     succeed f
         |> applyValidation field1
@@ -229,8 +231,7 @@ Let `f` represent a function that takes `N >= 2` arguments. Then,
         |> applyValidation fieldN
         |> validationToResult
 
-applies `f` to `N` arguments as long as no field has an error. The
-`Validation` type is converted to a `Result` type for convenience.
+applies `f` to `N` arguments as long as no field has an error.
 
 -}
 validationToResult : Validation e a -> Result (List e) a
@@ -252,22 +253,20 @@ type Type e a
 {-| The collection of conversion functions that comprise a `Type`. The conversion functions are useful
 for building new field types from existing field types.
 
-    import Field.Advanced as F exposing (Error, Type)
-
     type Positive
         = Positive Int
 
     fromString : String -> Result (Error e) Positive
     fromString =
-        (F.typeToConverters F.positiveInt).fromString >> Result.map Positive
+        (typeToConverters positiveInt).fromString >> Result.map Positive
 
     toString : Positive -> String
     toString (Positive p) =
-        (F.typeToConverters F.positiveInt).toString p
+        (typeToConverters positiveInt).toString p
 
     fieldType : Type (Error e) Positive
     fieldType =
-        F.customType
+        customType
             { fromString = fromString
             , toString = toString
             }
