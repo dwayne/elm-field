@@ -722,13 +722,15 @@ subsetOfBool =
 
 {-| Customize the errors and options.
 
+    import Set
+
     type MyError
         = MyBlank
         | MySyntaxError String
         | MyValidationError String
 
-    subsetOfBool : (Bool -> Bool) -> Type MyError Bool
-    subsetOfBool =
+    mySubsetOfBool : (Bool -> Bool) -> Type MyError Bool
+    mySubsetOfBool =
         customSubsetOfBool
             { blankError = MyBlank
             , syntaxError = MySyntaxError
@@ -746,17 +748,17 @@ subsetOfBool =
             , caseSensitive = True
             }
 
-    bool : Type MyError Bool
-    bool =
-        subsetOfBool (always True)
+    myBool : Type MyError Bool
+    myBool =
+        mySubsetOfBool (always True)
 
-    true : Type MyError Bool
-    true =
-        subsetOfBool ((==) True)
+    myTrue : Type MyError Bool
+    myTrue =
+        mySubsetOfBool ((==) True)
 
-    false : Type MyError Bool
-    false =
-        subsetOfBool ((==) False)
+    myFalse : Type MyError Bool
+    myFalse =
+        mySubsetOfBool ((==) False)
 
 -}
 customSubsetOfBool :

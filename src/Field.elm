@@ -521,54 +521,110 @@ subsetOfFloat =
 -- TYPE: BOOL
 
 
-{-| -}
+{-| Any case-insensitive [`defaultTruthy`](#defaultTruthy) or [`defaultFalsy`](#defaultFalsy) trimmed string.
+
+    (typeToConverters bool).fromString "true" == Ok True
+
+    (typeToConverters bool).fromString "TrUe" == Ok True
+
+    (typeToConverters bool).fromString "false" == Ok False
+
+    (typeToConverters bool).fromString "fAlSe" == Ok False
+
+    (typeToConverters bool).fromString " 1 " == Ok True
+
+    (typeToConverters bool).fromString " 0 " == Ok False
+
+    (typeToConverters bool).fromString "" == Err blankError
+
+    (typeToConverters bool).fromString "not" == Err (syntaxError "not")
+
+-}
 bool : Type Bool
 bool =
     F.bool
 
 
-{-| -}
+{-| Any case-insensitive [`defaultTruthy`](#defaultTruthy) trimmed string.
+
+    (typeToConverters true).fromString "true" == Ok True
+
+    (typeToConverters true).fromString "TrUe" == Ok True
+
+    (typeToConverters true).fromString "false" == Err (validationError "false")
+
+    (typeToConverters true).fromString "fAlSe" == Err (validationError "false")
+
+    (typeToConverters true).fromString " 1 " == Ok True
+
+    (typeToConverters true).fromString " 0 " == Err (validationError "false")
+
+    (typeToConverters true).fromString "" == Err blankError
+
+    (typeToConverters true).fromString "not" == Err (syntaxError "not")
+
+-}
 true : Type Bool
 true =
     F.true
 
 
-{-| -}
+{-| Any case-insensitive [`defaultFalsy`](#defaultFalsy) trimmed string.
+
+    (typeToConverters false).fromString "true" == Err (validationError "true")
+
+    (typeToConverters false).fromString "TrUe" == Err (validationError "true")
+
+    (typeToConverters false).fromString "false" == Ok False
+
+    (typeToConverters false).fromString "fAlSe" == Ok False
+
+    (typeToConverters false).fromString " 1 " == Err (validationError "true")
+
+    (typeToConverters false).fromString " 0 " == Ok False
+
+    (typeToConverters false).fromString "" == Err blankError
+
+    (typeToConverters false).fromString "not" == Err (syntaxError "not")
+
+-}
 false : Type Bool
 false =
     F.false
 
 
-{-| -}
-type alias CustomBoolOptions =
-    F.CustomBoolOptions
+{-| Customize the options.
 
+    import Set
 
-{-| -}
-defaultCustomBoolOptions : CustomBoolOptions
-defaultCustomBoolOptions =
-    F.defaultCustomBoolOptions
+    mySubsetOfBool : (Bool -> Bool) -> Type Bool
+    mySubsetOfBool =
+        customSubsetOfBool
+            { truthy = Set.fromList [ "#t" ]
+            , falsy = Set.fromList [ "#f" ]
+            , toString =
+                \b ->
+                    if b then
+                        "#t"
 
+                    else
+                        "#f"
+            , caseSensitive = True
+            }
 
-{-| -}
-defaultTruthy : Set String
-defaultTruthy =
-    F.defaultTruthy
+    myBool : Type Bool
+    myBool =
+        mySubsetOfBool (always True)
 
+    myTrue : Type Bool
+    myTrue =
+        mySubsetOfBool ((==) True)
 
-{-| -}
-defaultFalsy : Set String
-defaultFalsy =
-    F.defaultFalsy
+    myFalse : Type Bool
+    myFalse =
+        mySubsetOfBool ((==) False)
 
-
-{-| -}
-defaultBoolToString : Bool -> String
-defaultBoolToString =
-    F.defaultBoolToString
-
-
-{-| -}
+-}
 customSubsetOfBool : CustomBoolOptions -> (Bool -> Bool) -> Type Bool
 customSubsetOfBool =
     F.customSubsetOfBool
@@ -576,6 +632,52 @@ customSubsetOfBool =
         , syntaxError = F.syntaxError
         , validationError = F.validationError
         }
+
+
+{-| Used by [`customSubsetOfBool`](#customSubsetOfBool) to customize the options.
+-}
+type alias CustomBoolOptions =
+    F.CustomBoolOptions
+
+
+{-| The default options used by [`bool`](#bool), [`true`](#true), and [`false`](#false).
+
+    { truthy = defaultTruthy
+    , falsy = defaultFalsy
+    , toString = defaultBoolToString
+    , caseSensitive = False
+    }
+
+-}
+defaultCustomBoolOptions : CustomBoolOptions
+defaultCustomBoolOptions =
+    F.defaultCustomBoolOptions
+
+
+{-| The default truthy strings: `"true"`, `"1"`, `"yes"`, `"on"`, `"y"`, and `"enabled"`.
+-}
+defaultTruthy : Set String
+defaultTruthy =
+    F.defaultTruthy
+
+
+{-| The default falsy strings: `"false"`, `"0"`, `"no"`, `"off"`, `"n"`, and `"disabled"`.
+-}
+defaultFalsy : Set String
+defaultFalsy =
+    F.defaultFalsy
+
+
+{-|
+
+    defaultBoolToString True == "true"
+
+    defaultBoolToString False == "false"
+
+-}
+defaultBoolToString : Bool -> String
+defaultBoolToString =
+    F.defaultBoolToString
 
 
 
