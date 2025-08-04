@@ -1426,7 +1426,44 @@ applyValidation =
 -- STRING HELPERS
 
 
-{-| -}
+{-| Get rid of whitespace on both sides of a string.
+
+If the trimmed string is empty return [`blankError`](#blankError),
+otherwise apply the given function to the trimmed string.
+
+It is useful when you're defining a custom field type.
+
+    type Username = Username String
+
+    username : Type Username
+    username =
+        customType
+            { fromString =
+                trim
+                    (\s ->
+                        let
+                            len =
+                                String.length s
+                        in
+                        if len < 3 then
+                            Err <| customError "The username must have at least 3 characters."
+                        else if len > 25 then
+                            Err <| customError "The username must have at most 25 characters."
+                        else
+                            Ok (Username s)
+                    )
+            , toString =
+                \(Username s) -> s
+            }
+
+
+    toResult (fromString username "abc") == Ok (Username "abc")
+
+    toResult (fromString username "ab") == Err [ customError "The username must have at least 3 characters." ]
+
+    toResult (fromString username "abcdefghijklmnopqrstuvwxyz") == Err [ customError "The username must have at most 25 characters." ]
+
+-}
 trim : (String -> Result Error a) -> String -> Result Error a
 trim =
     F.trim
