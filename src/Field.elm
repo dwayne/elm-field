@@ -864,13 +864,58 @@ subsetOfNonBlankString =
 -- TYPE: USER-DEFINED
 
 
-{-| -}
+{-| Accept a subset of the values accepted by the given type.
+
+    positiveEvens = subsetOfType (modBy 2 >> (==) 0) positiveInt
+
+    (typeToConverters positiveEvens).fromString " 2 " == Ok 2
+
+    (typeToConverters positiveEvens).fromString "-2" == Err (validationError "-2")
+
+    (typeToConverters positiveEvens).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters positiveEvens).fromString "0" == Err (validationError "0")
+
+    (typeToConverters positiveEvens).fromString "1" == Err (validationError "1")
+
+    (typeToConverters positiveEvens).fromString "" == Err blankError
+
+    (typeToConverters positiveEvens).fromString "five" == Err (syntaxError "five")
+
+-}
 subsetOfType : (a -> Bool) -> Type a -> Type a
 subsetOfType =
     F.subsetOfType
 
 
-{-| -}
+{-| Define a new field type.
+
+    type Email = Email String
+
+    email : Type Email
+    email =
+        customType
+            { fromString =
+                trim
+                    (\s ->
+                        if s |> String.contains "@" then
+                            Ok (Email s)
+                        else
+                            Err (syntaxError s)
+                    )
+            , toString =
+                \(Email s) -> s
+            }
+
+    (typeToConverters email).fromString "a@b.c" == Ok (Email "a@b.c")
+
+    (typeToConverters email).fromString " a@b.c " == Ok (Email "a@b.c")
+
+    (typeToConverters email).fromString "" == Err blankError
+
+    (typeToConverters email).fromString " ab.c " == Err (syntaxError "ab.c")
+
+-}
 customType :
     { fromString : String -> Result Error a
     , toString : a -> String

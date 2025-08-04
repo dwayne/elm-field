@@ -1256,7 +1256,7 @@ customSubsetOfType toValidationError isGood (Type converters) =
         }
 
 
-{-| Define any new field type.
+{-| Define a new field type.
 
     type Email = Email String
 
