@@ -1917,9 +1917,9 @@ It is useful when you're defining a custom field type.
                                 String.length s
                         in
                         if len < 3 then
-                            Err <| customError "The username must have at least 3 characters."
+                            Err <| customError "The username must have at least 3 characters"
                         else if len > 25 then
-                            Err <| customError "The username must have at most 25 characters."
+                            Err <| customError "The username must have at most 25 characters"
                         else
                             Ok (Username s)
                     )
@@ -1930,9 +1930,9 @@ It is useful when you're defining a custom field type.
 
     toResult (fromString username "abc") == Ok (Username "abc")
 
-    toResult (fromString username "ab") == Err [ customError "The username must have at least 3 characters." ]
+    toResult (fromString username "ab") == Err [ customError "The username must have at least 3 characters" ]
 
-    toResult (fromString username "abcdefghijklmnopqrstuvwxyz") == Err [ customError "The username must have at most 25 characters." ]
+    toResult (fromString username "abcdefghijklmnopqrstuvwxyz") == Err [ customError "The username must have at most 25 characters" ]
 
 -}
 trim : (String -> Result (Error e) a) -> String -> Result (Error e) a
@@ -2105,21 +2105,21 @@ Let's continue with the example from [`customError`](#customError).
     toErrorMessage : Error UsernameError -> String
     toErrorMessage =
         errorToString
-            { onBlank = "The username is required."
+            { onBlank = "The username is required"
             , onSyntaxError = always ""
             , onValidationError = always ""
             , onCustomError =
                 \e ->
                     case e of
                         TooShort { actual, min } ->
-                            "The username must have at least " ++ String.fromInt min ++ " characters: " ++ String.fromInt actual ++ "."
+                            "The username must have at least " ++ String.fromInt min ++ " characters: " ++ String.fromInt actual
                         TooLong { actual, max } ->
-                            "The username must have at most " ++ String.fromInt max ++ " characters: " ++ String.fromInt actual ++ "."
+                            "The username must have at most " ++ String.fromInt max ++ " characters: " ++ String.fromInt actual
             }
 
-    toErrorMessage (customError <| TooShort { actual = 2, min = 3 }) == "The username must have at least 3 characters: 2."
+    toErrorMessage (customError <| TooShort { actual = 2, min = 3 }) == "The username must have at least 3 characters: 2"
 
-    toErrorMessage (customError <| TooLong { actual = 26, max = 25 }) == "The username must have at most 25 characters: 26."
+    toErrorMessage (customError <| TooLong { actual = 26, max = 25 }) == "The username must have at most 25 characters: 26"
 
 -}
 errorToString :
