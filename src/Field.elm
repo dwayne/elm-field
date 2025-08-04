@@ -955,20 +955,32 @@ optional =
 -- CONSTRUCT
 
 
-{-| -}
-empty : F.Type e a -> F.Field e a
+{-| Initialize a new field from the given type and the empty string.
+
+For all field types, `t`, `empty t` is equivalent to `fromString t ""`.
+
+-}
+empty : Type a -> Field a
 empty =
     F.empty
 
 
-{-| -}
-fromString : F.Type e a -> String -> F.Field e a
+{-| Initialize a new field from the given type and string.
+
+    toMaybe (fromString bool "enabled") == Just True
+
+-}
+fromString : Type a -> String -> Field a
 fromString =
     F.fromString
 
 
-{-| -}
-fromValue : F.Type e a -> a -> F.Field e a
+{-| Initialize a new field from the given type and value.
+
+    toMaybe (fromValue char 'a') == Just 'a'
+
+-}
+fromValue : Type a -> a -> Field a
 fromValue =
     F.fromValue
 

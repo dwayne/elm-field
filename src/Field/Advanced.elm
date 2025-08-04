@@ -1367,7 +1367,7 @@ customOptional isBlankError (Type converters) =
 
 {-| Initialize a new field from the given type and the empty string.
 
-    empty t == fromString t ""
+For all field types, `t`, `empty t` is equivalent to `fromString t ""`.
 
 -}
 empty : Type e a -> Field e a
