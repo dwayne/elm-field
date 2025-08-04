@@ -989,19 +989,61 @@ fromValue =
 -- CHANGE
 
 
-{-| -}
-setFromString : String -> F.Field e a -> F.Field e a
+{-|
+
+    field = empty positiveInt
+
+    toResult field == Err [ blankError ]
+
+    toResult (setFromString "-1" field) == Err [ validationError "-1" ]
+
+    toResult (setFromString "0" field) == Err [ validationError "0" ]
+
+    toResult (setFromString "1" field) == Ok 1
+
+    toResult (setFromString " 5 " field) == Ok 5
+
+    toResult (setFromString "   " field) == Err [ blankError ]
+
+    toResult (setFromString "five" field) == Err [ syntaxError "five" ]
+
+-}
+setFromString : String -> Field a -> Field a
 setFromString =
     F.setFromString
 
 
-{-| -}
-setFromValue : a -> F.Field e a -> F.Field e a
+{-|
+
+    field = empty (optional positiveInt)
+
+    toResult field == Ok Nothing
+
+    toResult (setFromValue (Just -1) field) == Err [ validationError "-1" ]
+
+    toResult (setFromValue (Just 0) field) == Err [ validationError "0" ]
+
+    toResult (setFromValue (Just 1) field) == Ok (Just 1)
+
+    toResult (setFromValue (Just 5) field) == Ok (Just 5)
+
+    toResult (setFromValue Nothing field) == Ok Nothing
+
+-}
+setFromValue : a -> Field a -> Field a
 setFromValue =
     F.setFromValue
 
 
-{-| -}
+{-|
+
+    field = empty int
+
+    error = customError "Not an integer"
+
+    toResult (setError error field) == Err [ error ]
+
+-}
 setError : Error -> Field a -> Field a
 setError =
     F.setError
@@ -1013,7 +1055,15 @@ setErrors =
     F.setErrors
 
 
-{-| -}
+{-|
+
+    field = empty int
+
+    error = customError "Not an integer"
+
+    toResult (setCustomError "Not an integer" field) == Err [ error ]
+
+-}
 setCustomError : String -> Field a -> Field a
 setCustomError =
     F.setCustomError
