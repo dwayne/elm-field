@@ -247,12 +247,12 @@ for building new field types from existing field types.
             }
 
 -}
-type alias Converters e a =
-    F.Converters e a
+type alias Converters a =
+    F.Converters Error a
 
 
 {-| -}
-typeToConverters : F.Type e a -> Converters e a
+typeToConverters : Type a -> Converters a
 typeToConverters =
     F.typeToConverters
 
@@ -1191,38 +1191,70 @@ isInvalid =
 -- CONVERT
 
 
-{-| -}
-toRawString : F.Field e a -> String
+{-|
+
+    toRawString (empty int) == ""
+
+    toRawString (fromString int " \n5  \t \n") == " \n5  \t \n"
+
+-}
+toRawString : Field a -> String
 toRawString =
     F.toRawString
 
 
-{-| -}
-toString : F.Field e a -> String
+{-|
+
+    toString (empty int) == ""
+
+    toString (fromString int " \n5  \t \n") == "5"
+
+-}
+toString : Field a -> String
 toString =
     F.toString
 
 
-{-| -}
-toMaybe : F.Field e a -> Maybe a
+{-|
+
+    toMaybe (empty int) == Nothing
+
+    toMaybe (fromString int "5") == Just 5
+
+-}
+toMaybe : Field a -> Maybe a
 toMaybe =
     F.toMaybe
 
 
-{-| -}
-toResult : F.Field e a -> Result (List e) a
+{-|
+
+    toResult (empty int) == Err [ blankError ]
+
+    toResult (fromString int "5") == Ok 5
+
+-}
+toResult : Field a -> Result (List Error) a
 toResult =
     F.toResult
 
 
-{-| -}
-toValidation : F.Field e a -> Validation e a
+{-|
+
+    import Validation as V
+
+    toValidation (empty int) == V.fail blankError
+
+    toValidation (fromString int "5") == V.succeed 5
+
+-}
+toValidation : Field a -> Validation Error a
 toValidation =
     F.toValidation
 
 
 {-| -}
-toConverters : F.Field e a -> F.Converters e a
+toConverters : Field a -> Converters a
 toConverters =
     F.toConverters
 
