@@ -684,13 +684,55 @@ defaultBoolToString =
 -- TYPE: CHAR
 
 
-{-| -}
+{-| Any `Char` that can be parsed from a string of exactly length one. The string is not trimmed.
+
+    (typeToConverters char).fromString "a" == Ok 'a'
+
+    (typeToConverters char).fromString "A" == Ok 'A'
+
+    (typeToConverters char).fromString "8" == Ok '8'
+
+    (typeToConverters char).fromString "\n" == Ok '\n'
+
+    (typeToConverters char).fromString "" == Err blankError
+
+    (typeToConverters char).fromString " " == Ok ' '
+
+    (typeToConverters char).fromString "  " == Err blankError
+
+    (typeToConverters char).fromString "aA" == Err (syntaxError "aA")
+
+    (typeToConverters char).fromString " 2 " == Err (syntaxError " 2 ")
+
+-}
 char : Type Char
 char =
     F.char
 
 
-{-| -}
+{-| Any `Char`, `c`, that can be parsed from a string of exactly length one such that `isGood c` is `True`. The string is not trimmed.
+
+    digit = subsetOfChar Char.isDigit
+
+    (typeToConverters digit).fromString "a" == Err (validationError "a")
+
+    (typeToConverters digit).fromString "A" == Err (validationError "A")
+
+    (typeToConverters digit).fromString "8" == Ok '8'
+
+    (typeToConverters digit).fromString "\n" == Err (validationError "\n")
+
+    (typeToConverters digit).fromString "" == Err blankError
+
+    (typeToConverters digit).fromString " " == Err (validationError " ")
+
+    (typeToConverters digit).fromString "  " == Err blankError
+
+    (typeToConverters digit).fromString "aA" == Err (syntaxError "aA")
+
+    (typeToConverters digit).fromString " 2 " == Err (syntaxError " 2 ")
+
+-}
 subsetOfChar : (Char -> Bool) -> Type Char
 subsetOfChar =
     F.subsetOfChar
