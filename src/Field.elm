@@ -1331,19 +1331,92 @@ validate5 =
 -- APPLY
 
 
-{-| -}
-applyMaybe : F.Field e a -> Maybe (a -> b) -> Maybe b
+{-| Suppose you want to use the values from multiple fields but you don't care about any of the
+errors that are present.
+
+    type Primitives
+        = Positive Int Float Bool Char String
+        | NonPositive Int Float Bool Char String
+
+    let
+        maybePrimitives =
+            (\n f b c s ->
+                if n > 0 then
+                    Positive n f b c s
+                else
+                    NonPositive n f b c s
+            )
+            |> Just
+            |> applyMaybe (fromString int "5")
+            |> applyMaybe (fromString float "3.14")
+            |> applyMaybe (fromValue bool True)
+            |> applyMaybe (fromValue char 'a')
+            |> applyMaybe (fromString string "Hello")
+    in
+    maybePrimitives == Just (Positive 5 3.14 True 'a' "Hello")
+
+-}
+applyMaybe : Field a -> Maybe (a -> b) -> Maybe b
 applyMaybe =
     F.applyMaybe
 
 
-{-| -}
+{-| Suppose you want to use the values from multiple fields and you only care about the
+first error that occurs.
+
+    type Primitives
+        = Positive Int Float Bool Char String
+        | NonPositive Int Float Bool Char String
+
+    let
+        resultPrimitives =
+            (\n f b c s ->
+                if n > 0 then
+                    Positive n f b c s
+                else
+                    NonPositive n f b c s
+            )
+            |> Ok
+            |> applyResult (fromString int "5")
+            |> applyResult (fromString float "pi")
+            |> applyResult (fromString bool "not")
+            |> applyResult (fromValue char 'a')
+            |> applyResult (fromString string "Hello")
+    in
+    resultPrimitives == Err [ syntaxError "pi" ]
+
+-}
 applyResult : F.Field e a -> Result (List e) (a -> b) -> Result (List e) b
 applyResult =
     F.applyResult
 
 
-{-| -}
+{-| Suppose you want to use the values from multiple fields and you care about all the
+errors that occur.
+
+    type Primitives
+        = Positive Int Float Bool Char String
+        | NonPositive Int Float Bool Char String
+
+    let
+        resultPrimitives =
+            (\n f b c s ->
+                if n > 0 then
+                    Positive n f b c s
+                else
+                    NonPositive n f b c s
+            )
+            |> succeed
+            |> applyValidation (fromString int "5")
+            |> applyValidation (fromString float "pi")
+            |> applyValidation (fromString bool "not")
+            |> applyValidation (fromValue char 'a')
+            |> applyValidation (fromString string "Hello")
+            |> validationToResult
+    in
+    resultPrimitives == Err [ syntaxError "pi", syntaxError "not" ]
+
+-}
 applyValidation : F.Field e a -> Validation e (a -> b) -> Validation e b
 applyValidation =
     F.applyValidation
