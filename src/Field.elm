@@ -929,7 +929,23 @@ customType =
 -- TYPE: OPTIONAL
 
 
-{-| -}
+{-| Make any field type optional.
+
+    maybePositiveInt = optional positiveInt
+
+    (typeToConverters maybePositiveInt).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters maybePositiveInt).fromString "0" == Err (validationError "0")
+
+    (typeToConverters maybePositiveInt).fromString "1" == Ok (Just 1)
+
+    (typeToConverters maybePositiveInt).fromString " 5 " == Ok (Just 5)
+
+    (typeToConverters maybePositiveInt).fromString "" == Ok Nothing
+
+    (typeToConverters maybePositiveInt).fromString "five" == Err (syntaxError "five")
+
+-}
 optional : Type a -> Type (Maybe a)
 optional =
     F.optional
