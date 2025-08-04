@@ -261,37 +261,125 @@ typeToConverters =
 -- TYPE: INT
 
 
-{-| -}
+{-| Any `Int` that can be parsed from a trimmed string using `String.toInt`.
+
+    (typeToConverters int).fromString "-1" == Ok -1
+
+    (typeToConverters int).fromString "0" == Ok 0
+
+    (typeToConverters int).fromString "1" == Ok 1
+
+    (typeToConverters int).fromString " 5 " == Ok 5
+
+    (typeToConverters int).fromString "" == Err blankError
+
+    (typeToConverters int).fromString "five" == Err (syntaxError "five")
+
+-}
 int : Type Int
 int =
     F.int
 
 
-{-| -}
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n >= 0`.
+
+    (typeToConverters nonNegativeInt).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters nonNegativeInt).fromString "0" == Ok 0
+
+    (typeToConverters nonNegativeInt).fromString "1" == Ok 1
+
+    (typeToConverters nonNegativeInt).fromString " 5 " == Ok 5
+
+    (typeToConverters nonNegativeInt).fromString "" == Err blankError
+
+    (typeToConverters nonNegativeInt).fromString "five" == Err (syntaxError "five")
+
+-}
 nonNegativeInt : Type Int
 nonNegativeInt =
     F.nonNegativeInt
 
 
-{-| -}
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n > 0`.
+
+    (typeToConverters positiveInt).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters positiveInt).fromString "0" == Err (validationError "0")
+
+    (typeToConverters positiveInt).fromString "1" == Ok 1
+
+    (typeToConverters positiveInt).fromString " 5 " == Ok 5
+
+    (typeToConverters positiveInt).fromString "" == Err blankError
+
+    (typeToConverters positiveInt).fromString "five" == Err (syntaxError "five")
+
+-}
 positiveInt : Type Int
 positiveInt =
     F.positiveInt
 
 
-{-| -}
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n <= 0`.
+
+    (typeToConverters nonPositiveInt).fromString "-1" == Ok -1
+
+    (typeToConverters nonPositiveInt).fromString "0" == Ok 0
+
+    (typeToConverters nonPositiveInt).fromString "1" == Err (validationError "1")
+
+    (typeToConverters nonPositiveInt).fromString " 5 " == Err (validationError "5")
+
+    (typeToConverters nonPositiveInt).fromString "" == Err blankError
+
+    (typeToConverters nonPositiveInt).fromString "five" == Err (syntaxError "five")
+
+-}
 nonPositiveInt : Type Int
 nonPositiveInt =
     F.nonPositiveInt
 
 
-{-| -}
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `n < 0`.
+
+    (typeToConverters negativeInt).fromString "-1" == Ok -1
+
+    (typeToConverters negativeInt).fromString "0" == Err (validationError "0")
+
+    (typeToConverters negativeInt).fromString "1" == Err (validationError "1")
+
+    (typeToConverters negativeInt).fromString " 5 " == Err (validationError "5")
+
+    (typeToConverters negativeInt).fromString "" == Err blankError
+
+    (typeToConverters negativeInt).fromString "five" == Err (syntaxError "five")
+
+-}
 negativeInt : Type Int
 negativeInt =
     F.negativeInt
 
 
-{-| -}
+{-| Any `Int`, `n`, that can be parsed from a trimmed string using `String.toInt` such that `isGood n` is `True`.
+
+    evens = subsetOfInt (modBy 2 >> (==) 0)
+
+    (typeToConverters evens).fromString "-2" == Ok -2
+
+    (typeToConverters evens).fromString "-1" == Err (validationError "-1")
+
+    (typeToConverters evens).fromString "0" == Ok 0
+
+    (typeToConverters evens).fromString "1" == Err (validationError "1")
+
+    (typeToConverters evens).fromString " 2 " == Ok 2
+
+    (typeToConverters evens).fromString "" == Err blankError
+
+    (typeToConverters evens).fromString "five" == Err (syntaxError "five")
+
+-}
 subsetOfInt : (Int -> Bool) -> Type Int
 subsetOfInt =
     F.subsetOfInt
