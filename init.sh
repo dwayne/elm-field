@@ -8,6 +8,14 @@ project="${project:?}"
 
 # FUNCTIONS
 
+check-scripts () {
+  shellcheck --norc --shell bash "$project/bin/"* "$project/init.sh"
+  #
+  # --no-rc = Don't look for .shellcheckrc files
+  # --shell = Specify dialect (sh, bash, dash, ksh, busybox)
+  #
+}
+
 format () {
   (cd "$project" && elm-format examples src tests "${@:---yes}")
 }
@@ -28,7 +36,15 @@ test-examples () {
   (cd "$project/examples" && elm-test "$@")
 }
 
-export -f format preview test lint-examples test-examples
+build-examples () {
+  (cd "$project/examples" && pnpm build)
+}
+
+export -f \
+  check-scripts \
+  format preview test \
+  lint-examples test-examples \
+  build-examples
 
 # ALIASES
 

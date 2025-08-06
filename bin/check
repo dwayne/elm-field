@@ -20,6 +20,7 @@ fail () {
   exit 1
 }
 
+run check-scripts
 run format --validate
 run test
 run lint-examples
