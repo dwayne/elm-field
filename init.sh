@@ -4,6 +4,7 @@
 # Usage: . init.sh
 #
 
+build="${build:?}"
 project="${project:?}"
 
 # FUNCTIONS
@@ -40,11 +41,15 @@ build-examples () {
   (cd "$project/examples" && pnpm build)
 }
 
+deploy-examples () {
+  deploy "$build" release/examples/production
+}
+
 export -f \
   check-scripts \
   format preview test \
   lint-examples test-examples \
-  build-examples
+  build-examples deploy-examples
 
 # ALIASES
 
