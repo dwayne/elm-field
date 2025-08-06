@@ -194,4 +194,4 @@ tooOld = F.fromString Age.fieldType "40"
 
 The custom errors could be converted to user-friendly error messages, using `Age.errorToString`, at a later time.
 
-You can find many more examples in the [`examples/`](/examples) directory.
+You can find the source code for many more examples in the [`examples/`](/examples) directory. And, you can fiddle with them at [https://dwayne.github.io/elm-field/](https://dwayne.github.io/elm-field/).

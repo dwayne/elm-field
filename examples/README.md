@@ -1,4 +1,4 @@
-# Examples
+# Examples - [Live Demo](https://dwayne.github.io/elm-field/)
 
 The examples are powered by [Astro](https://astro.build/) with the help of [hmsk/vite-plugin-elm](https://github.com/hmsk/vite-plugin-elm). They showcase some of the ways to use the package.
 
